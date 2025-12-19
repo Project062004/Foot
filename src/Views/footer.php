@@ -63,12 +63,86 @@
     </div>
 </footer>
 
+<style>
+    /* Hide Scrollbar Global Utility */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+
 <script>
     AOS.init({
         duration: 800,
         once: true,
         offset: 50
     });
+
+    // Global Toast Notification
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-5 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded shadow-lg text-white text-sm font-medium z-[100] transition-all duration-300 opacity-0 translate-y-4 ${type === 'error' ? 'bg-red-500' : 'bg-gray-900'}`;
+        toast.innerText = message;
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('opacity-0', 'translate-y-4');
+        });
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-4');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Global Wishlist Toggle
+    function toggleWishlist(id, btn = null) {
+        // Stop propagation if event exists (handled by caller usually but safe to check)
+        if (window.event) window.event.preventDefault();
+
+        fetch('/api/wishlist.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle', product_id: id })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Determine action based on status
+                    const isAdded = data.status === 'added';
+                    showToast(isAdded ? 'Added to Wishlist' : 'Removed from Wishlist');
+
+                    // Update Button State if btn is passed
+                    if (btn) {
+                        const svg = btn.querySelector('svg');
+                        if (svg) {
+                            svg.setAttribute('fill', isAdded ? 'currentColor' : 'none');
+                            // Add a little pop animation
+                            btn.classList.add('scale-125');
+                            setTimeout(() => btn.classList.remove('scale-125'), 200);
+                        }
+                    }
+
+                    // If on wishlist page, reload to remove item
+                    if (window.location.pathname.includes('/wishlist.php') && !isAdded) {
+                        setTimeout(() => window.location.reload(), 500);
+                    }
+
+                } else {
+                    showToast('Please Login to use Wishlist', 'error');
+                    // Optional: Redirect to login
+                    // window.location.href = '/login.php?redirect=' + encodeURIComponent(window.location.pathname);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Something went wrong', 'error');
+            });
+    }
 </script>
 </body>
 

@@ -203,6 +203,10 @@ require_once __DIR__ . '/../src/Views/header.php';
             });
     });
 
+    // Helper to get redirect param
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectParam = urlParams.get('redirect');
+
     verifyBtn.addEventListener('click', () => {
         const otp = document.getElementById('otp').value.trim();
         if (otp.length !== 6) { alert("Enter valid 6-digit OTP"); return; }
@@ -213,7 +217,7 @@ require_once __DIR__ . '/../src/Views/header.php';
                 fetch('/api/login.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mobile: mobileInput.value, id_token: token, method: 'mobile' })
+                    body: JSON.stringify({ mobile: mobileInput.value, id_token: token, method: 'mobile', redirect: redirectParam })
                 })
                     .then(res => res.json())
                     .then(data => {
@@ -242,7 +246,7 @@ require_once __DIR__ . '/../src/Views/header.php';
         fetch('/api/login.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, password: password, method: 'email' })
+            body: JSON.stringify({ email: email, password: password, method: 'email', redirect: redirectParam })
         })
             .then(res => res.json())
             .then(data => {

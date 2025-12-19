@@ -114,12 +114,12 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
 
                 <!-- Search -->
                 <div>
-                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Search</h3>
+                    <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Search</h3>
                     <form action="" method="GET" class="relative">
                         <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
                             placeholder="Find your style..."
-                            class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-md text-sm focus:outline-none focus:border-terracotta-500 transition-colors">
-                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor"
+                            class="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-terracotta-500 transition-colors shadow-sm">
+                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3.5" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -130,18 +130,39 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                     </form>
                 </div>
 
+                <!-- Price Range -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Price Range</h3>
+                    <form id="priceForm" action="" method="GET" class="space-y-4">
+                        <div class="flex items-center space-x-2">
+                            <input type="number" name="min_price" value="<?= $minPrice ?>" placeholder="Min"
+                                class="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-terracotta-500">
+                            <span class="text-gray-400">-</span>
+                            <input type="number" name="max_price" value="<?= $maxPrice ?>" placeholder="Max"
+                                class="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-terracotta-500">
+                        </div>
+                        <?php if ($search): ?><input type="hidden" name="q"
+                                value="<?= htmlspecialchars($search) ?>"><?php endif; ?>
+                        <?php if ($category !== 'All'): ?><input type="hidden" name="category"
+                                value="<?= htmlspecialchars($category) ?>"><?php endif; ?>
+                        <input type="hidden" name="sort" value="<?= $sort ?>">
+                        <button type="submit"
+                            class="w-full py-2 bg-gray-900 text-white text-xs font-bold uppercase rounded hover:bg-gray-800 transition">Apply</button>
+                    </form>
+                </div>
+
                 <!-- Categories -->
                 <div>
-                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Categories</h3>
+                    <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Categories</h3>
                     <div class="space-y-2">
-                        <a href="?category=All&sort=<?= $sort ?>"
+                        <a href="?category=All&sort=<?= $sort ?>&min_price=<?= $minPrice ?>&max_price=<?= $maxPrice ?>"
                             class="flex items-center justify-between text-sm group cursor-pointer">
                             <span
                                 class="<?= $category === 'All' ? 'font-bold text-terracotta-600' : 'text-gray-600 group-hover:text-gray-900' ?>">All
                                 Products</span>
                         </a>
                         <?php foreach ($dbCategories as $cat): ?>
-                            <a href="?category=<?= urlencode($cat) ?>&sort=<?= $sort ?>"
+                            <a href="?category=<?= urlencode($cat) ?>&sort=<?= $sort ?>&min_price=<?= $minPrice ?>&max_price=<?= $maxPrice ?>"
                                 class="flex items-center justify-between text-sm group cursor-pointer">
                                 <span
                                     class="<?= $category === $cat ? 'font-bold text-terracotta-600' : 'text-gray-600 group-hover:text-gray-900' ?>">
@@ -152,9 +173,21 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                 </div>
 
+                <!-- Size (Static Filter for UI completeness as requested) -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Size (UK)</h3>
+                    <div class="grid grid-cols-4 gap-2">
+                        <?php foreach ([6, 7, 8, 9, 10, 11] as $s): ?>
+                            <button disabled
+                                class="border border-gray-200 py-2 text-sm text-gray-400 rounded hover:border-gray-900 cursor-not-allowed"
+                                title="Filter logic pending"><?= $s ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
                 <!-- Sort -->
                 <div>
-                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Sort By</h3>
+                    <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Sort By</h3>
                     <form id="sortFormDesktop" class="space-y-2">
                         <?php
                         $sortOptions = [
@@ -175,7 +208,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                 </div>
 
                 <!-- Clear Filters -->
-                <?php if ($category !== 'All' || $search || $sort !== 'newest'): ?>
+                <?php if ($category !== 'All' || $search || $sort !== 'newest' || $minPrice > 0 || $maxPrice < 10000): ?>
                     <a href="/products.php"
                         class="block text-center text-xs font-bold text-terracotta-600 hover:text-terracotta-800 uppercase tracking-widest border-t pt-4 border-gray-200">
                         Clear All Filters
@@ -209,72 +242,49 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                 <?php else: ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-6">
                         <?php foreach ($products as $product): ?>
-                            <div class="group relative flex flex-col" data-aos="fade-up">
-                                <!-- Image Wrapper -->
-                                <div class="relative w-full aspect-[4/5] bg-gray-100 overflow-hidden rounded-sm mb-4">
-                                    <a href="/product.php?id=<?= $product['id'] ?>" class="block w-full h-full">
+                            <div class="group block h-full" data-aos="fade-up">
+                                <a href="/product.php?id=<?= $product['id'] ?>"
+                                    class="flex flex-col h-full bg-white rounded-[1.5rem] overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+                                    <div class="relative w-full aspect-square p-6 bg-white flex items-center justify-center">
                                         <img src="<?= htmlspecialchars($product['main_image'] ?: 'https://via.placeholder.com/600x800') ?>"
-                                            class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out"
+                                            class="w-full h-full object-contain mix-blend-multiply transform group-hover:scale-110 transition-transform duration-500 ease-out"
                                             loading="lazy">
-                                    </a>
 
-                                    <!-- Tags -->
-                                    <div class="absolute top-3 left-3 flex flex-col gap-2">
+                                        <!-- Wishlist Button -->
+                                        <button onclick="toggleWishlist(<?= $product['id'] ?>, this)"
+                                            class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-gray-50 transition-all shadow-sm z-20 border border-gray-100">
+                                            <svg class="w-5 h-5"
+                                                fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                                </path>
+                                            </svg>
+                                        </button>
+
                                         <?php if ($product['is_new']): ?>
                                             <span
-                                                class="bg-white/90 backdrop-blur text-gray-900 text-[10px] font-bold px-2 py-1 uppercase tracking-widest shadow-sm">New</span>
-                                        <?php endif; ?>
-                                        <?php if ($product['discount_percent'] > 0): ?>
-                                            <span
-                                                class="bg-terracotta-600 text-white text-[10px] font-bold px-2 py-1 uppercase tracking-widest shadow-sm">
-                                                -<?= $product['discount_percent'] ?>%
-                                            </span>
+                                                class="absolute top-4 left-4 bg-gray-900 text-white text-[10px] font-bold px-2 py-1 uppercase tracking-widest rounded shadow-sm">New</span>
                                         <?php endif; ?>
                                     </div>
 
-                                    <!-- Wishlist Button -->
-                                    <button onclick="toggleWishlist(<?= $product['id'] ?>, this)"
-                                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center text-gray-400 hover:text-terracotta-600 hover:bg-white transition-all shadow-sm z-10">
-                                        <svg class="w-4 h-4"
-                                            fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
-                                            stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
-                                            </path>
-                                        </svg>
-                                    </button>
-
-                                    <!-- Quick Action (Bottom Fade) -->
-                                    <div
-                                        class="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none group-hover:pointer-events-auto">
-                                        <a href="/product.php?id=<?= $product['id'] ?>"
-                                            class="block w-full text-center bg-white/95 backdrop-blur text-gray-900 text-xs font-bold uppercase tracking-widest py-3 hover:bg-gray-900 hover:text-white transition-colors shadow-lg">
-                                            View Details
-                                        </a>
-                                    </div>
-                                </div>
-
-                                <!-- Info -->
-                                <div class="flex flex-col flex-1">
-                                    <h3 class="text-sm font-medium text-gray-900 mb-1">
-                                        <a href="/product.php?id=<?= $product['id'] ?>">
+                                    <div class="p-5 pt-0 mt-auto">
+                                        <h3
+                                            class="text-base font-bold text-gray-900 mb-1 leading-tight group-hover:text-gray-600 transition-colors truncate">
                                             <?= htmlspecialchars($product['name']) ?>
-                                        </a>
-                                    </h3>
-                                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2 font-medium">
-                                        <?= htmlspecialchars($product['category']) ?>
-                                    </p>
-
-                                    <div class="flex items-center space-x-2 mt-auto">
-                                        <span
-                                            class="text-sm font-bold text-gray-900">₹<?= number_format($product['price_retail']) ?></span>
-                                        <?php if ($product['discount_percent'] > 0):
-                                            $oldPrice = $product['price_retail'] * (1 + ($product['discount_percent'] / 100));
-                                            ?>
-                                            <span class="text-xs text-gray-400 line-through">₹<?= number_format($oldPrice) ?></span>
-                                        <?php endif; ?>
+                                        </h3>
+                                        <div class="flex items-center space-x-2">
+                                            <span
+                                                class="text-sm text-gray-500 font-medium">₹<?= number_format($product['price_retail']) ?></span>
+                                            <?php if ($product['discount_percent'] > 0):
+                                                $oldPrice = $product['price_retail'] * (1 + ($product['discount_percent'] / 100));
+                                                ?>
+                                                <span
+                                                    class="text-xs text-gray-300 line-through">₹<?= number_format($oldPrice) ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -342,8 +352,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
     </div>
 </div>
 
-<script>
-    // Include AOS Init if not already global (Header usually has it)
+    // Include AOS Init if not already global
     if (typeof AOS !== 'undefined') {
         AOS.init();
     }
@@ -354,51 +363,5 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
         window.location.href = url.toString();
     }
 
-    // Toggle Wishlist Logic
-    function toggleWishlist(id, btn) {
-        fetch('/api/wishlist.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'toggle', product_id: id })
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Toggle Fill
-                    const svg = btn.querySelector('svg');
-                    if (data.status === 'added') {
-                        svg.setAttribute('fill', 'currentColor');
-                    } else {
-                        svg.setAttribute('fill', 'none');
-                    }
-
-                    // Show condensed notification
-                    showToast(data.status === 'added' ? 'Added to Wishlist' : 'Removed from Wishlist');
-                } else {
-                    showToast('Please login to use wishlist', 'error');
-                }
-            })
-            .catch(err => console.error(err));
-    }
-
-    // Simple Toast Notification for feedback
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `fixed bottom-5 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded shadow-lg text-white text-sm font-medium z-50 transition-all duration-300 opacity-0 translate-y-4 ${type === 'error' ? 'bg-red-500' : 'bg-gray-900'}`;
-        toast.innerText = message;
-        document.body.appendChild(toast);
-
-        // Animate In
-        requestAnimationFrame(() => {
-            toast.classList.remove('opacity-0', 'translate-y-4');
-        });
-
-        // Remove after 3s
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-y-4');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
-</script>
 
 <?php require_once __DIR__ . '/../src/Views/footer.php'; ?>

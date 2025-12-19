@@ -164,11 +164,19 @@ if ($hasWholesale && $wholesaleTotalPairs < 240) {
                         </div>
                     <?php endif; ?>
 
-                    <button type="button" <?= !$canCheckout ? 'disabled' : '' ?>
-                        onclick="window.location.href='/checkout.php'"
-                        class="w-full bg-terracotta-600 border border-transparent rounded-md shadow-sm py-3 px-4 text-base font-medium text-white hover:bg-terracotta-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-terracotta-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all">
-                        Proceed to Checkout
-                    </button>
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <button type="button" <?= !$canCheckout ? 'disabled' : '' ?>
+                            onclick="window.location.href='/checkout.php'"
+                            class="w-full bg-terracotta-600 border border-transparent rounded-md shadow-sm py-3 px-4 text-base font-medium text-white hover:bg-terracotta-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-terracotta-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all">
+                            Proceed to Checkout
+                        </button>
+                    <?php else: ?>
+                        <button type="button"
+                            onclick="alert('Please Login to Checkout'); window.location.href='/login.php?redirect=checkout'"
+                            class="w-full bg-gray-900 border border-transparent rounded-md shadow-sm py-3 px-4 text-base font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all">
+                            Login to Checkout
+                        </button>
+                    <?php endif; ?>
                 </div>
             </section>
         </div>

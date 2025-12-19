@@ -49,8 +49,10 @@ try {
         $_SESSION['user_name'] = $user['first_name'];
         $_SESSION['account_type'] = $user['account_type'];
 
-        // Redirect based on role? Or just generic profile
-        echo json_encode(['success' => true, 'redirect' => '/profile.php']);
+        // Redirect logic
+        $redirect = ($input['redirect'] ?? '') === 'checkout' ? '/checkout.php' : '/profile.php';
+
+        echo json_encode(['success' => true, 'redirect' => $redirect]);
     }
 
 } catch (Exception $e) {
