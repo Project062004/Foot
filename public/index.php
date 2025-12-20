@@ -26,9 +26,25 @@ $pimages = [
 <section id="hero-slider" class="relative h-[90vh] bg-gray-900 overflow-hidden">
     <!-- Slides Container -->
     <div class="relative w-full h-full">
+        <!-- Slide 0: Video Ad -->
+        <div
+            class="hero-slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100 flex items-center justify-center bg-black">
+            <!-- Video Wrapper for Object-Cover-like fill -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <iframe id="hero-video-iframe"
+                    src="https://www.youtube.com/embed/HbL-3vC_9aU?autoplay=1&mute=1&controls=0&loop=0&playlist=HbL-3vC_9aU&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1"
+                    class="absolute top-1/2 left-1/2 w-[300%] h-[300%] transform -translate-x-1/2 -translate-y-1/2 opacity-90"
+                    style="min-width: 100%; min-height: 100%; width: 177.77vh; height: 56.25vw;" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900/40 via-transparent to-transparent"></div>
+            </div>
+        </div>
+
         <!-- Slide 1 -->
         <div
-            class="hero-slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100 flex items-center justify-center">
+            class="hero-slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0 pointer-events-none flex items-center justify-center">
             <div class="absolute inset-0">
                 <img src="<?= $pimages[0] ?>"
                     class="w-full h-full object-cover opacity-60 transform scale-105 animate-slow-zoom"
@@ -142,6 +158,8 @@ $pimages = [
             class="hero-dot w-3 h-3 rounded-full bg-white/50 transition-all hover:bg-white ring-2 ring-transparent hover:ring-white"></button>
         <button onclick="goToHeroSlide(2)"
             class="hero-dot w-3 h-3 rounded-full bg-white/50 transition-all hover:bg-white ring-2 ring-transparent hover:ring-white"></button>
+        <button onclick="goToHeroSlide(3)"
+            class="hero-dot w-3 h-3 rounded-full bg-white/50 transition-all hover:bg-white ring-2 ring-transparent hover:ring-white"></button>
     </div>
 </section>
 
@@ -198,6 +216,29 @@ $pimages = [
 </style>
 
 <script>
+    // YouTube API Integration for Hero Slider
+    var player;
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('hero-video-iframe', {
+            events: {
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    }
+
+    function onPlayerStateChange(event) {
+        // If playing, clear the interval (stop auto-slide)
+        if (event.data == YT.PlayerState.PLAYING) {
+            clearInterval(heroInterval);
+        }
+        // If ended, go to next slide
+        if (event.data == YT.PlayerState.ENDED) {
+            changeHeroSlide('next');
+            // Allow auto-slide to resume for other slides
+            resetHeroTimer();
+        }
+    }
+
     // Hero Slider Logic
     let currentHeroIndex = 0;
     const heroSlides = document.querySelectorAll('.hero-slide');
@@ -215,9 +256,19 @@ $pimages = [
                     el.offsetHeight;
                     el.style.animation = null;
                 });
+
+                // If we land on the video slide (0), try to play video
+                if (i === 0 && player && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                }
             } else {
                 slide.classList.add('opacity-0', 'pointer-events-none');
                 slide.classList.remove('opacity-100', 'z-10');
+
+                // If leaving video slide, pause it
+                if (i === 0 && player && typeof player.pauseVideo === 'function') {
+                    player.pauseVideo();
+                }
             }
         });
         heroDots.forEach((dot, i) => {
@@ -249,9 +300,21 @@ $pimages = [
 
     function resetHeroTimer() {
         clearInterval(heroInterval);
-        heroInterval = setInterval(() => changeHeroSlide('next'), 6000);
+        // Do NOT auto-slide if we are on the video slide (index 0)
+        // The YouTube API 'ENDED' event will handle the transition
+        if (currentHeroIndex !== 0) {
+            heroInterval = setInterval(() => changeHeroSlide('next'), 6000);
+        }
     }
+
+    // Start initial timer logic (will check index 0 and likely hold)
     resetHeroTimer();
+
+    // Load YouTube API
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 </script>
 
 <!-- 1. New Arrivals Section -->
@@ -292,28 +355,40 @@ $pimages = [
                 ?>
                 <div class="min-w-[300px] md:min-w-[340px] snap-start flex-shrink-0 group">
                     <!-- Card Container with Text Inside -->
-                     <a href="/product.php?id=<?= $product['id'] ?>" class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
-                        <div class="relative h-[320px] p-6 bg-gray-50/50 flex items-center justify-center">
-                            <img src="<?= $imgUrl ?>" class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110">
-                            
-                            <span class="absolute top-5 left-5 bg-white/95 backdrop-blur text-gray-900 text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest rounded-full shadow-sm">NEW</span>
-                            
+                    <a href="/product.php?id=<?= $product['id'] ?>"
+                        class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                        <div class="relative h-[320px] p-2 bg-gray-50/50 flex items-center justify-center">
+                            <img src="<?= $imgUrl ?>"
+                                class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110">
+
+                            <span
+                                class="absolute top-5 left-5 bg-white/95 backdrop-blur text-gray-900 text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest rounded-full shadow-sm">NEW</span>
+
                             <!-- Wishlist -->
-                            <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)" class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
-                                <svg class="w-5 h-5" fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)"
+                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
+                                <svg class="w-5 h-5"
+                                    fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                    </path>
                                 </svg>
                             </button>
                         </div>
-                        
+
                         <div class="p-6 text-center mt-auto bg-white border-t border-gray-50">
-                            <h3 class="text-xl font-bold text-gray-900 font-serif leading-tight mb-2 group-hover:text-terracotta-600 transition-colors">
+                            <h3
+                                class="text-xl font-bold text-gray-900 font-serif leading-tight mb-2 group-hover:text-terracotta-600 transition-colors">
                                 <?= htmlspecialchars($product['name']) ?>
                             </h3>
                             <div class="flex items-center justify-center space-x-3">
-                                <p class="text-xs text-gray-500 uppercase tracking-widest font-medium"><?= htmlspecialchars($product['category']) ?></p>
+                                <p class="text-xs text-gray-500 uppercase tracking-widest font-medium">
+                                    <?= htmlspecialchars($product['category']) ?>
+                                </p>
                                 <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                                <span class="text-base font-bold text-gray-900">₹<?= number_format($product['price_retail']) ?></span>
+                                <span
+                                    class="text-base font-bold text-gray-900">₹<?= number_format($product['price_retail']) ?></span>
                             </div>
                         </div>
                     </a>
@@ -368,28 +443,40 @@ $pimages = [
                 ?>
                 <div class="min-w-[300px] md:min-w-[340px] snap-start flex-shrink-0 group">
                     <!-- Card Container with Text Inside -->
-                     <a href="/product.php?id=<?= $product['id'] ?>" class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
-                        <div class="relative h-[320px] p-6 bg-white flex items-center justify-center">
-                            <img src="<?= $imgUrl ?>" class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110">
-                            
-                            <span class="absolute top-5 left-5 bg-terracotta-500 text-white text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest rounded-full shadow-sm">HOT</span>
-                            
+                    <a href="/product.php?id=<?= $product['id'] ?>"
+                        class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                        <div class="relative h-[320px] p-2 bg-white flex items-center justify-center">
+                            <img src="<?= $imgUrl ?>"
+                                class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110">
+
+                            <span
+                                class="absolute top-5 left-5 bg-terracotta-500 text-white text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest rounded-full shadow-sm">HOT</span>
+
                             <!-- Wishlist -->
-                            <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)" class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
-                                <svg class="w-5 h-5" fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)"
+                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
+                                <svg class="w-5 h-5"
+                                    fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                    </path>
                                 </svg>
                             </button>
                         </div>
-                        
+
                         <div class="p-6 text-center mt-auto bg-white border-t border-gray-50">
-                            <h3 class="text-xl font-bold text-gray-900 font-serif leading-tight mb-2 group-hover:text-terracotta-600 transition-colors">
+                            <h3
+                                class="text-xl font-bold text-gray-900 font-serif leading-tight mb-2 group-hover:text-terracotta-600 transition-colors">
                                 <?= htmlspecialchars($product['name']) ?>
                             </h3>
                             <div class="flex items-center justify-center space-x-3">
-                                <p class="text-xs text-gray-500 uppercase tracking-widest font-medium"><?= htmlspecialchars($product['category']) ?></p>
+                                <p class="text-xs text-gray-500 uppercase tracking-widest font-medium">
+                                    <?= htmlspecialchars($product['category']) ?>
+                                </p>
                                 <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                                <span class="text-base font-bold text-gray-900">₹<?= number_format($product['price_retail']) ?></span>
+                                <span
+                                    class="text-base font-bold text-gray-900">₹<?= number_format($product['price_retail']) ?></span>
                             </div>
                         </div>
                     </a>
@@ -532,92 +619,191 @@ $pimages = [
     </div>
 </section>
 
-<!-- 5. Reviews Cards Section (Soft) -->
-<section class="py-24 bg-gray-50 border-t border-gray-100">
+<!-- 5. Reviews Cards Section (Slider Style) -->
+<section class="py-20 bg-gray-50 border-t border-gray-100 relative overflow-hidden">
     <div class="max-w-7xl mx-auto px-6 lg:px-8">
-        <div class="text-center mb-20" data-aos="fade-up">
-            <h2 class="text-4xl font-bold text-gray-900 font-serif mb-6">Customer Love</h2>
-            <div class="w-20 h-1.5 bg-terracotta-500 mx-auto rounded-full mb-8"></div>
-            <p class="text-gray-500 max-w-2xl mx-auto text-lg leading-relaxed">Trusted by over 500+ wholesale partners
-                and thousands of happy customers.</p>
+        <!-- Centered Header with Navigation -->
+        <div class="flex flex-col items-center text-center mb-12" data-aos="fade-down">
+            <span class="text-terracotta-600 font-bold uppercase tracking-wider text-xs block mb-3">Testimonials</span>
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 font-serif mb-6">Customer Love</h2>
+            <div class="w-20 h-1.5 bg-terracotta-500 rounded-full mb-6"></div>
+
+            <div class="flex space-x-4">
+                <button
+                    class="swiper-button-prev-reviews w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all shadow-sm hover:shadow-lg bg-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button
+                    class="swiper-button-next-reviews w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all shadow-sm hover:shadow-lg bg-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="flex overflow-x-auto space-x-8 pb-10 scrollbar-hide px-4 min-h-[350px]" id="reviews-container">
             <!-- Review 1 -->
-            <div class="bg-white p-10 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
-                data-aos="fade-up" data-aos-delay="0">
-                <div class="flex items-center space-x-1 mb-6">
-                    <?php for ($i = 0; $i < 5; $i++): ?>
-                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                    <?php endfor; ?>
-                </div>
-                <p class="text-gray-700 italic mb-8 leading-loose font-light text-lg">"The wholesale ordering process is
-                    seamless. The matrix logic for sizes saved me hours of manual calculation. Highly recommended for
-                    bulk buyers!"</p>
-                <div class="flex items-center border-t border-gray-100 pt-6">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop"
-                        class="w-14 h-14 rounded-full object-cover mr-4 ring-4 ring-gray-50">
-                    <div>
-                        <h4 class="font-bold text-gray-900 text-base font-serif">Sarah Jenkins</h4>
-                        <span class="text-terracotta-600 text-xs uppercase tracking-wide font-bold">Boutique
+            <div class="w-[300px] md:w-[340px] snap-start flex-shrink-0 group">
+                <div
+                    class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                    <!-- Top Section: Profile (Reduced Height) -->
+                    <div
+                        class="relative h-[220px] bg-gray-50/50 flex flex-col items-center justify-center text-center p-6">
+                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop"
+                            class="w-20 h-20 rounded-full object-cover mb-3 ring-4 ring-white shadow-sm">
+                        <h4 class="font-bold text-gray-900 text-lg font-serif">Sarah Jenkins</h4>
+                        <span class="text-terracotta-600 text-[10px] uppercase tracking-wide font-bold mt-1">Boutique
                             Owner</span>
+                        <div class="flex items-center space-x-1 mt-3">
+                            <?php for ($i = 0; $i < 5; $i++): ?>
+                                <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Review Text -->
+                    <div
+                        class="p-6 text-center mt-auto bg-white border-t border-gray-50 flex items-center justify-center flex-1">
+                        <p class="text-gray-600 italic leading-relaxed font-light text-sm line-clamp-4">"The wholesale
+                            ordering process is seamless. The matrix logic for sizes saved me hours of manual
+                            calculation. Highly recommended!"</p>
                     </div>
                 </div>
             </div>
 
             <!-- Review 2 -->
-            <div class="bg-white p-10 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
-                data-aos="fade-up" data-aos-delay="100">
-                <div class="flex items-center space-x-1 mb-6">
-                    <?php for ($i = 0; $i < 5; $i++): ?>
-                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                    <?php endfor; ?>
-                </div>
-                <p class="text-gray-700 italic mb-8 leading-loose font-light text-lg">"Incredible quality for the sports
-                    edition. My customers love the comfort and the design is top-notch. Will definitely restock soon."
-                </p>
-                <div class="flex items-center border-t border-gray-100 pt-6">
-                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop"
-                        class="w-14 h-14 rounded-full object-cover mr-4 ring-4 ring-gray-50">
-                    <div>
-                        <h4 class="font-bold text-gray-900 text-base font-serif">Rahul Sharma</h4>
-                        <span class="text-terracotta-600 text-xs uppercase tracking-wide font-bold">Retail
+            <div class="w-[300px] md:w-[340px] snap-start flex-shrink-0 group">
+                <div
+                    class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                    <div class="relative h-[220px] bg-white flex flex-col items-center justify-center text-center p-6">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop"
+                            class="w-20 h-20 rounded-full object-cover mb-3 ring-4 ring-gray-100 shadow-sm">
+                        <h4 class="font-bold text-gray-900 text-lg font-serif">Rahul Sharma</h4>
+                        <span class="text-terracotta-600 text-[10px] uppercase tracking-wide font-bold mt-1">Retail
                             Manager</span>
+                        <div class="flex items-center space-x-1 mt-3">
+                            <?php for ($i = 0; $i < 5; $i++): ?>
+                                <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <div
+                        class="p-6 text-center mt-auto bg-white border-t border-gray-50 flex items-center justify-center flex-1">
+                        <p class="text-gray-600 italic leading-relaxed font-light text-sm line-clamp-4">"Incredible
+                            quality for the sports edition. My customers love the comfort and the design is top-notch.
+                            Will definitely restock soon."</p>
                     </div>
                 </div>
             </div>
 
             <!-- Review 3 -->
-            <div class="bg-white p-10 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
-                data-aos="fade-up" data-aos-delay="200">
-                <div class="flex items-center space-x-1 mb-6">
-                    <?php for ($i = 0; $i < 5; $i++): ?>
-                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                    <?php endfor; ?>
+            <div class="w-[300px] md:w-[340px] snap-start flex-shrink-0 group">
+                <div
+                    class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                    <div
+                        class="relative h-[220px] bg-gray-50/50 flex flex-col items-center justify-center text-center p-6">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&auto=format&fit=crop"
+                            class="w-20 h-20 rounded-full object-cover mb-3 ring-4 ring-white shadow-sm">
+                        <h4 class="font-bold text-gray-900 text-lg font-serif">Priya Patel</h4>
+                        <span
+                            class="text-terracotta-600 text-[10px] uppercase tracking-wide font-bold mt-1">Distributor</span>
+                        <div class="flex items-center space-x-1 mt-3">
+                            <?php for ($i = 0; $i < 5; $i++): ?>
+                                <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <div
+                        class="p-6 text-center mt-auto bg-white border-t border-gray-50 flex items-center justify-center flex-1">
+                        <p class="text-gray-600 italic leading-relaxed font-light text-sm line-clamp-4">"Fast delivery
+                            and standard packaging is excellent. The wholesale tier pricing helps us maintain good
+                            margins in a competitive market."</p>
+                    </div>
                 </div>
-                <p class="text-gray-700 italic mb-8 leading-loose font-light text-lg">"Fast delivery and standard
-                    packaging is excellent. The wholesale tier pricing helps us maintain good margins in a competitive
-                    market."</p>
-                <div class="flex items-center border-t border-gray-100 pt-6">
-                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150&auto=format&fit=crop"
-                        class="w-14 h-14 rounded-full object-cover mr-4 ring-4 ring-gray-50">
-                    <div>
-                        <h4 class="font-bold text-gray-900 text-base font-serif">Priya Patel</h4>
-                        <span class="text-terracotta-600 text-xs uppercase tracking-wide font-bold">Distributor</span>
+            </div>
+
+            <!-- Review 4 -->
+            <div class="w-[300px] md:w-[340px] snap-start flex-shrink-0 group">
+                <div
+                    class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                    <div class="relative h-[220px] bg-white flex flex-col items-center justify-center text-center p-6">
+                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop"
+                            class="w-20 h-20 rounded-full object-cover mb-3 ring-4 ring-gray-100 shadow-sm">
+                        <h4 class="font-bold text-gray-900 text-lg font-serif">Ananya Gupta</h4>
+                        <span class="text-terracotta-600 text-[10px] uppercase tracking-wide font-bold mt-1">Fashion
+                            Blogger</span>
+                        <div class="flex items-center space-x-1 mt-3">
+                            <?php for ($i = 0; $i < 5; $i++): ?>
+                                <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <div
+                        class="p-6 text-center mt-auto bg-white border-t border-gray-50 flex items-center justify-center flex-1">
+                        <p class="text-gray-600 italic leading-relaxed font-light text-sm line-clamp-4">"Absolutely in
+                            love with the heels collection. They are my go-to for every event now. Comfort and style at
+                            its best."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 5 -->
+            <div class="w-[300px] md:w-[340px] snap-start flex-shrink-0 group">
+                <div
+                    class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
+                    <div
+                        class="relative h-[220px] bg-gray-50/50 flex flex-col items-center justify-center text-center p-6">
+                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop"
+                            class="w-20 h-20 rounded-full object-cover mb-3 ring-4 ring-white shadow-sm">
+                        <h4 class="font-bold text-gray-900 text-lg font-serif">Mike Ross</h4>
+                        <span class="text-terracotta-600 text-[10px] uppercase tracking-wide font-bold mt-1">Gym
+                            Owner</span>
+                        <div class="flex items-center space-x-1 mt-3">
+                            <?php for ($i = 0; $i < 5; $i++): ?>
+                                <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+
+                    <div
+                        class="p-6 text-center mt-auto bg-white border-t border-gray-50 flex items-center justify-center flex-1">
+                        <p class="text-gray-600 italic leading-relaxed font-light text-sm line-clamp-4">"The sports
+                            shoes are incredibly durable. Perfect for heavy workouts and they look great too. highly
+                            recommend!"</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        document.querySelector('.swiper-button-next-reviews').addEventListener('click', () => {
+            document.getElementById('reviews-container').scrollBy({ left: 372, behavior: 'smooth' });
+        });
+        document.querySelector('.swiper-button-prev-reviews').addEventListener('click', () => {
+            document.getElementById('reviews-container').scrollBy({ left: -372, behavior: 'smooth' });
+        });
+    </script>
 </section>
 
 <!-- Global Scripts for Actions -->
@@ -629,3 +815,7 @@ $pimages = [
 <?php
 require_once __DIR__ . '/../src/Views/footer.php';
 ?>
+
+<script>
+
+</script>

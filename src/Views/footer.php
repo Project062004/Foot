@@ -101,7 +101,7 @@
 
     // Global Wishlist Toggle
     function toggleWishlist(id, btn = null) {
-        // Stop propagation if event exists (handled by caller usually but safe to check)
+        // Stop propagation if event exists
         if (window.event) window.event.preventDefault();
 
         fetch('/api/wishlist.php', {
@@ -112,37 +112,96 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // Determine action based on status
                     const isAdded = data.status === 'added';
                     showToast(isAdded ? 'Added to Wishlist' : 'Removed from Wishlist');
 
-                    // Update Button State if btn is passed
+                    // Update Badge
+                    const badge = document.getElementById('wishlist-count');
+                    if (badge) {
+                        let count = parseInt(badge.innerText) || 0;
+                        if (isAdded) {
+                            count++;
+                            badge.classList.remove('hidden');
+                        } else {
+                            count = Math.max(0, count - 1);
+                            if (count === 0) badge.classList.add('hidden');
+                        }
+                        badge.innerText = count;
+                    }
+
+                    // Update Button State
                     if (btn) {
                         const svg = btn.querySelector('svg');
                         if (svg) {
                             svg.setAttribute('fill', isAdded ? 'currentColor' : 'none');
-                            // Add a little pop animation
                             btn.classList.add('scale-125');
                             setTimeout(() => btn.classList.remove('scale-125'), 200);
                         }
                     }
 
-                    // If on wishlist page, reload to remove item
+                    // Reload if on wishlist page
                     if (window.location.pathname.includes('/wishlist.php') && !isAdded) {
                         setTimeout(() => window.location.reload(), 500);
                     }
 
                 } else {
-                    showToast('Please Login to use Wishlist', 'error');
-                    // Optional: Redirect to login
-                    // window.location.href = '/login.php?redirect=' + encodeURIComponent(window.location.pathname);
+                    showToast(data.message || 'Please Login', 'error');
                 }
             })
             .catch(err => {
                 console.error(err);
-                showToast('Something went wrong', 'error');
+                showToast('Error updating wishlist', 'error');
             });
     }
+
+    // Global Cart Badge Update
+    function updateCartBadge(count) {
+        const badge = document.getElementById('cart-count');
+        if (badge) {
+            badge.innerText = count;
+            if (count > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+    }
+
+    // Global Auto Scroll Logic
+    function startAutoScroll(containerId, speed = 20) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        let scrollInterval;
+        let isPaused = false;
+
+        function autoScroll() {
+            if (!isPaused) {
+                // If scrolled to end, reset to 0
+                if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
+                    container.scrollLeft = 0;
+                } else {
+                    container.scrollLeft += 1;
+                }
+            }
+        }
+
+        container.addEventListener('mouseenter', () => isPaused = true);
+        container.addEventListener('mouseleave', () => isPaused = false);
+        // Pause on touch for mobile
+        container.addEventListener('touchstart', () => isPaused = true);
+        container.addEventListener('touchend', () => isPaused = false);
+
+        scrollInterval = setInterval(autoScroll, speed);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // IDs for Index Page
+        // startAutoScroll('new-arrivals-container', 30); // Disabled by user request
+        // startAutoScroll('trending-container', 30); // Disabled by user request
+        startAutoScroll('reviews-container', 40);
+
+        // IDs for Product Page
+        startAutoScroll('similar-products-container', 30);
+        startAutoScroll('recommended-products-container', 30);
+    });
 </script>
 </body>
 

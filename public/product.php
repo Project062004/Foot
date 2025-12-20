@@ -434,7 +434,7 @@ $recommendedProducts = $stmt->fetchAll();
                     All</a>
             </div>
 
-            <div class="flex space-x-6 overflow-x-auto pb-8 snap-x scrollbar-hide px-2">
+            <div id="similar-products-container" class="flex space-x-6 overflow-x-auto pb-8 scrollbar-hide px-2">
                 <?php foreach ($similarProducts as $sim): ?>
                     <div class="min-w-[220px] w-[220px] snap-start group h-full">
                         <a href="/product.php?id=<?= $sim['id'] ?>"
@@ -464,7 +464,7 @@ $recommendedProducts = $stmt->fetchAll();
                 <h2 class="text-2xl font-serif font-bold text-gray-900">Recommended For You</h2>
             </div>
 
-            <div class="flex space-x-6 overflow-x-auto pb-8 snap-x scrollbar-hide px-2">
+            <div id="recommended-products-container" class="flex space-x-6 overflow-x-auto pb-8 scrollbar-hide px-2">
                 <?php foreach ($recommendedProducts as $rec): ?>
                     <div class="min-w-[220px] w-[220px] snap-start group h-full">
                         <a href="/product.php?id=<?= $rec['id'] ?>"
@@ -681,14 +681,9 @@ $recommendedProducts = $stmt->fetchAll();
             .then(data => {
                 if (data.success) {
                     showToast('Added to bag successfully');
-                    // Optional: Update cart count header if possible without reload, or just redirect
-                    // For flow "smooth", maybe don't redirect immediately? User asked for "cart function with flow".
-                    // Usually "flow" means user stays on page or gets a drawer.
-                    // Given I don't have a cart drawer, I will stick to redirect or just toast.
-                    // Let's redirect after a short delay so they see the toast.
-                    setTimeout(() => {
-                        window.location.href = '/cart.php';
-                    }, 500);
+                    if (typeof updateCartBadge === 'function') {
+                        updateCartBadge(data.count);
+                    }
                 } else {
                     showToast(data.error, 'error');
                 }

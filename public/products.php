@@ -352,7 +352,8 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
     </div>
 </div>
 
-    // Include AOS Init if not already global
+<!-- Include AOS Init if not already global -->
+<script>
     if (typeof AOS !== 'undefined') {
         AOS.init();
     }
@@ -362,6 +363,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
         url.searchParams.set('sort', value);
         window.location.href = url.toString();
     }
+</script>
 
 
 <?php require_once __DIR__ . '/../src/Views/footer.php'; ?>
