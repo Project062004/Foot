@@ -23,12 +23,8 @@ $grandTotal = $retailTotal + $wholesaleTotalAmount;
 $canCheckout = true;
 $checkoutMessage = "";
 
-// 240 Rule
-if ($hasWholesale && $wholesaleTotalPairs < 240) {
-    $canCheckout = false;
-    $remaining = 240 - $wholesaleTotalPairs;
-    $checkoutMessage = "Wholesale Requirement: You need to order at least 240 pairs. Please add $remaining more pairs.";
-}
+// 240 Rule Removed
+// if ($hasWholesale && $wholesaleTotalPairs < 240) { ... }
 
 ?>
 
@@ -47,7 +43,7 @@ if ($hasWholesale && $wholesaleTotalPairs < 240) {
                 <h3 class="mt-2 text-xl font-medium text-gray-900 font-serif">Your bag is empty</h3>
                 <p class="mt-1 text-gray-500">Looks like you haven't added anything yet.</p>
                 <div class="mt-8">
-                    <a href="/products.php"
+                    <a href="<?= $basePath ?>/products.php"
                         class="inline-flex items-center px-8 py-3 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-gray-900 hover:bg-gray-800 transition-all duration-300">
                         Start Shopping
                     </a>
@@ -70,7 +66,7 @@ if ($hasWholesale && $wholesaleTotalPairs < 240) {
                                     <div>
                                         <div class="flex justify-between items-start">
                                             <h3 class="text-lg font-bold text-gray-900 font-serif">
-                                                <a href="/product.php?id=<?= $item['product_id'] ?>"
+                                                <a href="<?= $basePath ?>/product.php?id=<?= $item['product_id'] ?>"
                                                     class="hover:text-terracotta-600 transition-colors">
                                                     <?= htmlspecialchars($item['name']) ?>
                                                 </a>
@@ -200,13 +196,13 @@ if ($hasWholesale && $wholesaleTotalPairs < 240) {
 
                         <?php if (isset($_SESSION['user_id'])): ?>
                             <button type="button" <?= !$canCheckout ? 'disabled' : '' ?>
-                                onclick="window.location.href='/checkout.php'"
+                                onclick="window.location.href='<?= $basePath ?>/checkout.php'"
                                 class="w-full bg-gray-900 border border-transparent rounded-full shadow-lg hover:shadow-xl py-4 px-4 text-base font-bold text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5">
                                 Checkout Securely
                             </button>
                         <?php else: ?>
                             <button type="button"
-                                onclick="alert('Please Login to Checkout'); window.location.href='/login.php?redirect=checkout'"
+                                onclick="alert('Please Login to Checkout'); window.location.href='<?= $basePath ?>/login.php?redirect=checkout'"
                                 class="w-full bg-gray-900 border border-transparent rounded-full shadow-lg hover:shadow-xl py-4 px-4 text-base font-bold text-white hover:bg-gray-800 transition-all duration-300 transform hover:-translate-y-0.5">
                                 Login to Checkout
                             </button>
@@ -228,7 +224,7 @@ if ($hasWholesale && $wholesaleTotalPairs < 240) {
 <script>
     function removeItem(index) {
         if (!confirm('Are you sure you want to remove this item?')) return;
-        fetch('/api/cart_remove.php', {
+        fetch('<?= $basePath ?>/api/cart_remove.php', {
             method: 'POST',
             body: JSON.stringify({ index: index }),
             headers: { 'Content-Type': 'application/json' }

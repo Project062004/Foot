@@ -20,12 +20,13 @@ try {
     $conn->beginTransaction();
 
     // 1. Insert Product
-    $stmt = $conn->prepare("INSERT INTO products (name, category, description, price_retail, is_new, is_bestseller) VALUES (:name, :cat, :desc, :price, 1, 0)");
+    $stmt = $conn->prepare("INSERT INTO products (name, category, description, price_retail, is_new, is_bestseller, sale_mode) VALUES (:name, :cat, :desc, :price, 1, 0, :sale_mode)");
     $stmt->execute([
         'name' => $input['name'],
         'cat' => $input['category'],
         'desc' => $input['description'] ?? '',
-        'price' => $input['price_retail']
+        'price' => $input['price_retail'],
+        'sale_mode' => $input['sale_mode'] ?? 'both'
     ]);
     $productId = $conn->lastInsertId();
 

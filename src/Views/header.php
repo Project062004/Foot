@@ -4,6 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $wishlistCount = count($_SESSION['wishlist'] ?? []);
 $cartCount = count($_SESSION['cart'] ?? []);
+
+// Define base path dynamically
+$scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+$basePath = ($scriptDir === '/' || $scriptDir === '\\') ? '' : $scriptDir;
+// Ensure no trailing slash unless it's empty (which it won't be if we check above correctly, but for safety)
+$basePath = rtrim($basePath, '/\\');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -82,26 +88,27 @@ $cartCount = count($_SESSION['cart'] ?? []);
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center pr-8">
-                    <a href="/" class="flex items-center">
-                        <img src="/assets/images/logo.png" alt="WEAR." class="h-20 w-auto object-contain">
+                    <a href="<?= $basePath ?>/" class="flex items-center">
+                        <img src="<?= $basePath ?>/assets/images/logo.png" alt="WEAR."
+                            class="h-20 w-auto object-contain">
                     </a>
                 </div>
 
                 <!-- Desktop Menu (Bold & Uppercase) -->
                 <div class="hidden lg:flex space-x-8 items-center">
-                    <a href="/"
+                    <a href="<?= $basePath ?>/"
                         class="text-xs font-bold text-gray-300 hover:text-white hover:text-terracotta-500 transition-colors uppercase tracking-[0.15em]">Home</a>
-                    <a href="/products.php"
+                    <a href="<?= $basePath ?>/products.php"
                         class="text-xs font-bold text-gray-300 hover:text-white hover:text-terracotta-500 transition-colors uppercase tracking-[0.15em]">Products</a>
-                    <a href="/about.php"
+                    <a href="<?= $basePath ?>/about.php"
                         class="text-xs font-bold text-gray-300 hover:text-white hover:text-terracotta-500 transition-colors uppercase tracking-[0.15em]">About</a>
-                    <a href="/contact.php"
+                    <a href="<?= $basePath ?>/contact.php"
                         class="text-xs font-bold text-gray-300 hover:text-white hover:text-terracotta-500 transition-colors uppercase tracking-[0.15em]">Contact</a>
                 </div>
 
                 <!-- Animated Search Bar (Smaller Width) -->
                 <div class="hidden md:flex flex-1 max-w-[280px] mx-6">
-                    <form action="/products.php" method="GET" class="w-full relative group">
+                    <form action="<?= $basePath ?>/products.php" method="GET" class="w-full relative group">
                         <div
                             class="relative w-full bg-gray-800/50 rounded-full h-9 flex items-center overflow-hidden transition-all duration-300 focus-within:ring-1 focus-within:ring-terracotta-500 focus-within:bg-gray-800 border border-gray-700">
 
@@ -203,7 +210,7 @@ $cartCount = count($_SESSION['cart'] ?? []);
                         </svg>
                     </button>
 
-                    <a href="/wishlist.php"
+                    <a href="<?= $basePath ?>/wishlist.php"
                         class="text-gray-300 hover:text-terracotta-600 transition-colors hidden sm:block relative">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
@@ -213,7 +220,8 @@ $cartCount = count($_SESSION['cart'] ?? []);
                         <span id="wishlist-count"
                             class="absolute -top-1 -right-1 bg-terracotta-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center <?= $wishlistCount > 0 ? '' : 'hidden' ?>"><?= $wishlistCount ?></span>
                     </a>
-                    <a href="/cart.php" class="text-gray-300 hover:text-terracotta-600 transition-colors relative">
+                    <a href="<?= $basePath ?>/cart.php"
+                        class="text-gray-300 hover:text-terracotta-600 transition-colors relative">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -222,7 +230,8 @@ $cartCount = count($_SESSION['cart'] ?? []);
                         <span id="cart-count"
                             class="absolute -top-1 -right-1 bg-terracotta-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center <?= $cartCount > 0 ? '' : 'hidden' ?>"><?= $cartCount ?></span>
                     </a>
-                    <a href="/profile.php" class="text-gray-300 hover:text-terracotta-600 transition-colors">
+                    <a href="<?= $basePath ?>/profile.php"
+                        class="text-gray-300 hover:text-terracotta-600 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"

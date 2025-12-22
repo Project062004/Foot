@@ -82,7 +82,7 @@ require_once __DIR__ . '/../src/Views/header.php';
                             placeholder="••••••••">
                     </div>
                     <div class="flex justify-end">
-                        <a href="/forgot_password.php"
+                        <a href="<?= $basePath ?>/forgot_password.php"
                             class="text-sm font-medium text-[#d05e42] hover:text-[#b04b32]">Forgot Password?</a>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ require_once __DIR__ . '/../src/Views/header.php';
             </form>
 
             <div class="mt-8 text-center">
-                <a href="/register.php" class="text-sm font-medium text-[#d05e42] hover:text-[#b04b32]">
+                <a href="<?= $basePath ?>/register.php" class="text-sm font-medium text-[#d05e42] hover:text-[#b04b32]">
                     New user? Create an account
                 </a>
             </div>
@@ -105,7 +105,7 @@ require_once __DIR__ . '/../src/Views/header.php';
 </div>
 
 <script type="module">
-    import { auth, signInWithPhoneNumber, RecaptchaVerifier } from "/assets/js/firebase-init.js";
+    import { auth, signInWithPhoneNumber, RecaptchaVerifier } from "<?= $basePath ?>/assets/js/firebase-init.js";
 
     // Initialize Recaptcha (Only needed for Mobile Tab)
     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
@@ -214,7 +214,7 @@ require_once __DIR__ . '/../src/Views/header.php';
         verifyBtn.innerText = "Verifying...";
         confirmationResult.confirm(otp).then((result) => {
             result.user.getIdToken().then(token => {
-                fetch('/api/login.php', {
+                fetch('<?= $basePath ?>/api/login.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ mobile: mobileInput.value, id_token: token, method: 'mobile', redirect: redirectParam })
@@ -243,7 +243,7 @@ require_once __DIR__ . '/../src/Views/header.php';
         emailLoginBtn.disabled = true;
         emailLoginBtn.innerText = "Signing in...";
 
-        fetch('/api/login.php', {
+        fetch('<?= $basePath ?>/api/login.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, password: password, method: 'email', redirect: redirectParam })

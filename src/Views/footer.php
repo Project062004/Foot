@@ -6,7 +6,7 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <!-- Brand -->
             <div class="col-span-1 md:col-span-1">
-                <a href="/" class="text-2xl font-bold tracking-tighter text-white mb-6 block">
+                <a href="<?= $basePath ?>/" class="text-2xl font-bold tracking-tighter text-white mb-6 block">
                     WEAR<span class="text-terracotta-500">.</span>
                 </a>
                 <p class="text-gray-400 text-sm leading-relaxed mb-6">
@@ -104,7 +104,7 @@
         // Stop propagation if event exists
         if (window.event) window.event.preventDefault();
 
-        fetch('/api/wishlist.php', {
+        fetch('<?= $basePath ?>/api/wishlist.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'toggle', product_id: id })
@@ -199,8 +199,8 @@
         startAutoScroll('reviews-container', 40);
 
         // IDs for Product Page
-        startAutoScroll('similar-products-container', 30);
-        startAutoScroll('recommended-products-container', 30);
+        // startAutoScroll('similar-products-container', 30); // Disabled by user request
+        // startAutoScroll('recommended-products-container', 30); // Disabled by user request
     });
 </script>
 </body>

@@ -67,7 +67,7 @@ $pimages = [
                     elegance.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
-                    <a href="/products.php?sort=newest"
+                    <a href="<?= $basePath ?>/products.php?sort=newest"
                         class="px-10 py-4 bg-terracotta-600 hover:bg-terracotta-700 text-white font-medium uppercase tracking-widest text-sm transition-all transform hover:scale-105 shadow-xl hover:shadow-terracotta-500/20">
                         Shop Collection
                     </a>
@@ -98,7 +98,7 @@ $pimages = [
                         Exclusive discounts on our best-selling sneakers and formals. <br>Don't miss out on these
                         premium styles.
                     </p>
-                    <a href="/products.php?sort=price_low"
+                    <a href="<?= $basePath ?>/products.php?sort=price_low"
                         class="inline-flex items-center px-8 py-4 bg-white text-gray-900 hover:bg-gray-100 font-bold uppercase tracking-widest text-sm transition-colors">
                         Shop The Sale
                         <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,10 +125,10 @@ $pimages = [
                     "Fashion that keeps up with your pace."
                 </p>
                 <div class="flex justify-center space-x-6">
-                    <a href="/products.php?category=Sports"
+                    <a href="<?= $basePath ?>/products.php?category=Sports"
                         class="text-white border-b-2 border-terracotta-500 pb-1 hover:text-terracotta-400 transition-colors text-lg">Shop
                         Sports</a>
-                    <a href="/products.php?category=Casual"
+                    <a href="<?= $basePath ?>/products.php?category=Casual"
                         class="text-white border-b-2 border-white pb-1 hover:text-gray-300 transition-colors text-lg">Shop
                         Casual</a>
                 </div>
@@ -347,15 +347,14 @@ $pimages = [
             id="new-arrivals-container">
             <?php
             // Fetch Newest
-            $nStmt = $conn->query("SELECT * FROM products ORDER BY created_at DESC LIMIT 8");
+            $nStmt = $conn->query("SELECT p.*, (SELECT image_url FROM product_colors pc WHERE pc.product_id = p.id LIMIT 1) as main_image FROM products p ORDER BY created_at DESC LIMIT 8");
             $newArrivals = $nStmt->fetchAll();
-            $ni = 0;
             foreach ($newArrivals as $product):
-                $imgUrl = $pimages[($ni++ + 3) % count($pimages)];
+                $imgUrl = $product['main_image'] ?: 'https://via.placeholder.com/400x400?text=No+Image';
                 ?>
                 <div class="min-w-[300px] md:min-w-[340px] snap-start flex-shrink-0 group">
                     <!-- Card Container with Text Inside -->
-                    <a href="/product.php?id=<?= $product['id'] ?>"
+                    <a href="<?= $basePath ?>/product.php?id=<?= $product['id'] ?>"
                         class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
                         <div class="relative h-[320px] p-2 bg-gray-50/50 flex items-center justify-center">
                             <img src="<?= $imgUrl ?>"
@@ -366,11 +365,10 @@ $pimages = [
 
                             <!-- Wishlist -->
                             <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)"
-                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
-                                <svg class="w-5 h-5"
-                                    fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100 <?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'text-red-500' : 'text-gray-400 hover:text-red-500' ?>">
+                                <svg class="w-5 h-5 transition-colors" fill="currentColor" stroke="currentColor"
+                                    stroke-width="0" viewBox="0 0 24 24">
+                                    <path
                                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                                     </path>
                                 </svg>
@@ -435,15 +433,14 @@ $pimages = [
             id="trending-container">
             <?php
             // Fetch Trending
-            $tStmt = $conn->query("SELECT * FROM products ORDER BY RAND() LIMIT 8");
+            $tStmt = $conn->query("SELECT p.*, (SELECT image_url FROM product_colors pc WHERE pc.product_id = p.id LIMIT 1) as main_image FROM products p ORDER BY RAND() LIMIT 8");
             $trending = $tStmt->fetchAll();
-            $ti = 0;
             foreach ($trending as $product):
-                $imgUrl = $pimages[($ti++ + 6) % count($pimages)];
+                $imgUrl = $product['main_image'] ?: 'https://via.placeholder.com/400x400?text=No+Image';
                 ?>
                 <div class="min-w-[300px] md:min-w-[340px] snap-start flex-shrink-0 group">
                     <!-- Card Container with Text Inside -->
-                    <a href="/product.php?id=<?= $product['id'] ?>"
+                    <a href="<?= $basePath ?>/product.php?id=<?= $product['id'] ?>"
                         class="block h-full bg-white rounded-[2rem] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 flex flex-col">
                         <div class="relative h-[320px] p-2 bg-white flex items-center justify-center">
                             <img src="<?= $imgUrl ?>"
@@ -454,11 +451,10 @@ $pimages = [
 
                             <!-- Wishlist -->
                             <button onclick="event.preventDefault(); toggleWishlist(<?= $product['id'] ?>, this)"
-                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100">
-                                <svg class="w-5 h-5"
-                                    fill="<?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'currentColor' : 'none' ?>"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 shadow-sm hover:shadow-md z-10 border border-gray-100 <?= in_array($product['id'], $_SESSION['wishlist'] ?? []) ? 'text-red-500' : 'text-gray-400 hover:text-red-500' ?>">
+                                <svg class="w-5 h-5 transition-colors" fill="currentColor" stroke="currentColor"
+                                    stroke-width="0" viewBox="0 0 24 24">
+                                    <path
                                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                                     </path>
                                 </svg>
@@ -571,7 +567,7 @@ $pimages = [
                             </h3>
                             <p class="text-gray-600 text-sm font-medium tracking-wide"><?= $col['sub'] ?></p>
                         </div>
-                        <a href="/products.php?category=<?= $col['link'] ?>"
+                        <a href="<?= $basePath ?>/products.php?category=<?= $col['link'] ?>"
                             class="flex items-center justify-between w-full px-6 py-4 <?= $col['btn_bg'] ?> hover:bg-white border border-gray-900/5 hover:border-gray-900/10 rounded-2xl transition-all duration-300 group-hover:shadow-md text-gray-900 text-xs font-bold uppercase tracking-[0.15em]">
                             Explore
                             <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform text-gray-700"
@@ -601,7 +597,7 @@ $pimages = [
                     high-street fashion. Our commitment to quality ensures that every pair is a masterpiece of comfort
                     and durability.
                 </p>
-                <a href="/about.php"
+                <a href="<?= $basePath ?>/about.php"
                     class="text-terracotta-600 font-bold hover:text-terracotta-700 transition inline-flex items-center text-sm uppercase tracking-widest">
                     Read our full story <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

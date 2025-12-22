@@ -209,7 +209,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
 
                 <!-- Clear Filters -->
                 <?php if ($category !== 'All' || $search || $sort !== 'newest' || $minPrice > 0 || $maxPrice < 10000): ?>
-                    <a href="/products.php"
+                    <a href="<?= $basePath ?>/products.php"
                         class="block text-center text-xs font-bold text-terracotta-600 hover:text-terracotta-800 uppercase tracking-widest border-t pt-4 border-gray-200">
                         Clear All Filters
                     </a>
@@ -235,7 +235,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                         <h3 class="text-lg font-medium text-gray-900">No products found</h3>
                         <p class="text-gray-500 mt-2 max-w-sm">We couldn't find exactly what you're looking for. Try
                             adjusting your search or filters.</p>
-                        <a href="/products.php"
+                        <a href="<?= $basePath ?>/products.php"
                             class="mt-6 px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors">View
                             All Products</a>
                     </div>
@@ -243,11 +243,12 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-6">
                         <?php foreach ($products as $product): ?>
                             <div class="group block h-full" data-aos="fade-up">
-                                <a href="/product.php?id=<?= $product['id'] ?>"
+                                <a href="<?= $basePath ?>/product.php?id=<?= $product['id'] ?>"
                                     class="flex flex-col h-full bg-white rounded-[1.5rem] overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
-                                    <div class="relative w-full aspect-square p-6 bg-white flex items-center justify-center">
+                                    <div
+                                        class="relative w-full aspect-[5/6] bg-gray-50 flex items-center justify-center overflow-hidden">
                                         <img src="<?= htmlspecialchars($product['main_image'] ?: 'https://via.placeholder.com/600x800') ?>"
-                                            class="w-full h-full object-contain mix-blend-multiply transform group-hover:scale-110 transition-transform duration-500 ease-out"
+                                            class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500 ease-out"
                                             loading="lazy">
 
                                         <!-- Wishlist Button -->
@@ -268,14 +269,14 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
                                         <?php endif; ?>
                                     </div>
 
-                                    <div class="p-5 pt-0 mt-auto">
+                                    <div class="p-4 mt-auto">
                                         <h3
-                                            class="text-base font-bold text-gray-900 mb-1 leading-tight group-hover:text-gray-600 transition-colors truncate">
+                                            class="text-base font-bold text-gray-900 mb-2 leading-tight group-hover:text-gray-600 transition-colors line-clamp-2">
                                             <?= htmlspecialchars($product['name']) ?>
                                         </h3>
                                         <div class="flex items-center space-x-2">
                                             <span
-                                                class="text-sm text-gray-500 font-medium">₹<?= number_format($product['price_retail']) ?></span>
+                                                class="text-sm text-gray-900 font-bold">₹<?= number_format($product['price_retail']) ?></span>
                                             <?php if ($product['discount_percent'] > 0):
                                                 $oldPrice = $product['price_retail'] * (1 + ($product['discount_percent'] / 100));
                                                 ?>
@@ -345,7 +346,7 @@ $dbCategories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
         </div>
 
         <div class="p-5 border-t border-gray-100">
-            <a href="/products.php"
+            <a href="<?= $basePath ?>/products.php"
                 class="block w-full py-3 bg-gray-100 text-gray-900 text-center text-sm font-bold uppercase rounded hover:bg-gray-200 transition-colors">Clear
                 All</a>
         </div>
