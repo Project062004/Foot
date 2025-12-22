@@ -81,11 +81,11 @@ $recommendedProducts = $stmt->fetchAll();
         <div class="lg:grid lg:grid-cols-12 lg:gap-x-12">
 
             <!-- Left: Gallery (Grid) - Col Span 7 -->
-            <div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-6">
+            <div class="lg:col-span-7 grid grid-cols-2 gap-5 content-start">
                 <?php if (!empty($colors)): ?>
                     <?php foreach ($colors as $index => $color): ?>
                         <div onclick="openZoomModal(<?= $index ?>)"
-                            class="cursor-pointer relative w-full aspect-[4/5] overflow-hidden rounded-[2rem] bg-gray-100 group shadow-sm hover:shadow-lg transition-shadow duration-300">
+                            class="cursor-pointer relative w-full aspect-[5/6] overflow-hidden rounded-[2rem] bg-gray-100 group shadow-sm hover:shadow-lg transition-shadow duration-300">
                             <img src="<?= $color['image_url'] ?>"
                                 class="w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-out">
                             <?php if ($index === 0): ?>
@@ -259,7 +259,7 @@ $recommendedProducts = $stmt->fetchAll();
                             <div class="flex gap-2">
                                 <input type="number" id="ws-custom-qty" placeholder="Custom quantity"
                                     class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-gray-900 focus:border-gray-900 outline-none"
-                                    oninput="wsState.packSize = parseInt(this.value)||0; renderWholesaleMatrix()">
+                                    oninput="handleCustomQtyInput(this.value)">
                                 <button onclick="autoSplit()"
                                     class="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors">Auto
                                     Split</button>
@@ -272,10 +272,10 @@ $recommendedProducts = $stmt->fetchAll();
                                 Mix</label>
                             <div class="space-y-2">
                                 <?php foreach ($colors as $color): ?>
-                                    <label
-                                        class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white transition-all select-none"
-                                        onclick="toggleColor(this, '<?= $color['id'] ?>', '<?= $color['color_name'] ?>')">
-                                        <input type="checkbox" class="hidden ws-color-check" value="<?= $color['id'] ?>">
+                                    <label id="ws-lbl-<?= $color['id'] ?>"
+                                        class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white transition-all select-none">
+                                        <input type="checkbox" class="hidden ws-color-check" value="<?= $color['id'] ?>"
+                                            onchange="toggleColor(this, '<?= $color['id'] ?>', '<?= $color['color_name'] ?>')">
                                         <div class="h-6 w-6 rounded-full border border-gray-200 shrink-0"
                                             style="background-color: <?= $color['hex_code'] ?>;"></div>
                                         <span
@@ -675,44 +675,72 @@ $recommendedProducts = $stmt->fetchAll();
         distribution: {} // Key format: "colorId_size" -> quantity
     };
 
-    function toggleColor(el, id, name) {
-        const checkIcon = el.querySelector('.check-icon');
-        const exists = wsState.selectedColors.find(c => c.id == id);
-
-        if (exists) {
+    function toggleColor(input, id, name) {
+        // Source of truth is the checkbox state
+        const label = document.getElementById('ws-lbl-' + id);
+        const checkIcon = label.querySelector('.check-icon');
+        
+        if (input.checked) {
+            // Add to state if not exists
+            if (!wsState.selectedColors.find(c => c.id == id)) {
+                wsState.selectedColors.push({ id, name });
+            }
+            
+            // Apply Active Styles
+            label.classList.remove('bg-white', 'border-gray-200');
+            label.classList.add('ring-2', 'ring-gray-900', 'bg-blue-50', 'border-gray-900');
+            if(checkIcon) checkIcon.classList.remove('hidden');
+            
+        } else {
+            // Remove from state
             wsState.selectedColors = wsState.selectedColors.filter(c => c.id != id);
-            el.classList.remove('ring-1', 'ring-gray-900', 'bg-gray-50');
-            checkIcon.classList.add('hidden');
+            
+            // Remove Active Styles
+            label.classList.remove('ring-2', 'ring-gray-900', 'bg-blue-50', 'border-gray-900');
+            label.classList.add('bg-white', 'border-gray-200');
+            if(checkIcon) checkIcon.classList.add('hidden');
+            
             // Clear distribution for this color
             for (const key in wsState.distribution) {
-                if (key.startsWith(`${id}_`)) {
-                    delete wsState.distribution[key];
-                }
+                if (key.startsWith(`${id}_`)) delete wsState.distribution[key];
             }
-        } else {
-            wsState.selectedColors.push({ id, name });
-            el.classList.add('ring-1', 'ring-gray-900', 'bg-gray-50');
-            checkIcon.classList.remove('hidden');
         }
+        
         renderWholesaleMatrix();
     }
 
     function setPackSize(size, btnEl) {
         wsState.packSize = size;
-        wsState.manualQty = false;
-        wsState.distribution = {}; // Clear distribution when pack size changes
-
+        wsState.manualQty = false; // "Fixed" mode
+        wsState.distribution = {}; // Clear previous custom edits
+        
         // Update UI buttons
         document.querySelectorAll('.pack-btn').forEach(b => {
-            b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
-            b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
+             b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+             b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
         });
-        if (btnEl) {
+        if(btnEl) {
             btnEl.classList.remove('bg-white', 'text-gray-900', 'border-gray-200');
             btnEl.classList.add('bg-gray-800', 'text-white', 'border-gray-800');
         }
-
-        document.getElementById('ws-custom-qty').value = size;
+        
+        // Clear custom input visually
+        document.getElementById('ws-custom-qty').value = '';
+        
+        renderWholesaleMatrix();
+    }
+    
+    // Triggered when user Types in the Custom Box
+    function handleCustomQtyInput(val) {
+        wsState.packSize = parseInt(val) || 0;
+        wsState.manualQty = true; // "Custom" mode
+        
+        // Reset Pack Buttons
+        document.querySelectorAll('.pack-btn').forEach(b => {
+             b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+             b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
+        });
+        
         renderWholesaleMatrix();
     }
 
@@ -723,45 +751,52 @@ $recommendedProducts = $stmt->fetchAll();
     }
 
     function autoSplit() {
-        const customVal = parseInt(document.getElementById('ws-custom-qty').value);
-        if (!customVal || customVal <= 0) return;
-
-        wsState.packSize = customVal;
-        wsState.distribution = {}; // Clear existing distribution before auto-splitting
-
-        // Find visible inputs
+        // Only for Custom Mode or Manual Trigger
+        if(!wsState.packSize || wsState.packSize <= 0) return;
+        
         const inputs = document.querySelectorAll('.ws-size-input');
-        if (inputs.length === 0) return;
-
-        const perInput = Math.floor(customVal / inputs.length);
-        let remainder = customVal % inputs.length;
-
+        if(inputs.length === 0) return;
+        
+        const perInput = Math.floor(wsState.packSize / inputs.length);
+        let remainder = wsState.packSize % inputs.length;
+        
         inputs.forEach(inp => {
             let val = perInput;
-            if (remainder > 0) { val++; remainder--; }
-
-            // Update DOM and State
+            if(remainder > 0) { val++; remainder--; }
+            
             inp.value = val;
             const key = `${inp.dataset.color}_${inp.dataset.size}`;
             wsState.distribution[key] = val;
         });
-
+        
         updateWholesaleSummary();
     }
 
     function renderWholesaleMatrix() {
         const container = document.getElementById('ws-matrix-container');
         container.innerHTML = '';
-
+        
         if (wsState.selectedColors.length === 0) {
             container.innerHTML = '<p class="text-sm text-gray-400 italic text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">Select at least one color above to see distribution options.</p>';
             updateWholesaleSummary();
             return;
         }
 
+        // PRE-CALCULATE DISTRIBUTION IF IN "FIXED PACK" MODE
+        let fixedPerSlot = 0;
+        let fixedRemainder = 0;
+        let isReadOnly = false;
+        
+        if (!wsState.manualQty && wsState.packSize > 0) {
+            isReadOnly = true;
+            const totalSlots = wsState.selectedColors.length * 5; // 5 sizes always
+            fixedPerSlot = Math.floor(wsState.packSize / totalSlots);
+            fixedRemainder = wsState.packSize % totalSlots;
+        }
+
         const sizes = [7, 8, 9, 10, 11];
         let html = '<div class="space-y-6">';
-
+        
         wsState.selectedColors.forEach(color => {
             html += `
             <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
@@ -771,11 +806,24 @@ $recommendedProducts = $stmt->fetchAll();
                     <span class="text-[10px] text-gray-500">5 Sizes Available</span>
                 </div>
                 <div class="p-2 space-y-1">`;
-
+                
             sizes.forEach(size => {
                 const key = `${color.id}_${size}`;
-                const val = wsState.distribution[key] || 0;
-
+                let val = 0;
+                
+                if (!wsState.manualQty && wsState.packSize > 0) {
+                    // Fixed Mode: Calculate Value
+                    val = fixedPerSlot;
+                    if (fixedRemainder > 0) { val++; fixedRemainder--; }
+                    // Update state immediately for consistency
+                    wsState.distribution[key] = val;
+                } else {
+                    // Custom Mode: Use State
+                    val = wsState.distribution[key] || 0;
+                }
+                
+                const readOnlyAttr = isReadOnly ? 'readonly class="ws-size-input w-20 border border-transparent bg-gray-50 rounded-md px-3 py-1.5 text-sm text-center font-bold text-gray-500 outline-none cursor-not-allowed"' : 'class="ws-size-input w-20 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-center font-medium focus:ring-1 focus:ring-gray-900 outline-none transition-shadow"';
+                
                 html += `
                 <div class="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded group transition-colors">
                     <div class="flex items-center space-x-3">
@@ -788,33 +836,18 @@ $recommendedProducts = $stmt->fetchAll();
                          </div>
                     </div>
                     <div class="flex items-center">
-                        <input type="number" min="0" placeholder="0"
-                            class="ws-size-input w-20 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-center font-medium focus:ring-1 focus:ring-gray-900 outline-none transition-shadow" 
+                        <input type="number" min="0" placeholder="0" ${readOnlyAttr}
                             data-color="${color.id}" data-size="${size}" value="${val}" oninput="handleDistInput(this)">
                     </div>
                 </div>`;
             });
-
+            
             html += `</div></div>`;
         });
         html += '</div>';
         container.innerHTML = html;
-
-        // Auto-distribute if pack size is set and existing total is 0
-        if (wsState.packSize > 0) {
-            const inputs = document.querySelectorAll('.ws-size-input');
-            let currentTotal = 0;
-            inputs.forEach(i => currentTotal += parseInt(i.value) || 0);
-            // Use logic: if total visible quantity is 0, then auto split.
-            // But we just rendered from State. If state was empty (all 0), we split.
-            if (currentTotal === 0) {
-                autoSplit();
-            } else {
-                updateWholesaleSummary();
-            }
-        } else {
-            updateWholesaleSummary();
-        }
+        
+        updateWholesaleSummary();
     }
 
     function updateWholesaleSummary() {
