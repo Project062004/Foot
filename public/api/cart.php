@@ -22,6 +22,34 @@ if (!isset($_SESSION['cart'])) {
 // Wholesale: { type: 'wholesale', product_id, total_quantity, colors: [id, id], packaging: 'box' }
 // Sample: { type: 'sample', product_id, color_id, size, quantity: 1 }
 
+// DUPLICATE CHECK
+foreach ($_SESSION['cart'] as $existing) {
+    if ($existing['product_id'] == $input['product_id'] && $existing['type'] == $input['type']) {
+        // Retail & Sample Strict Check
+        if (in_array($input['type'], ['retail', 'sample'])) {
+            if ($existing['color_id'] == $input['color_id'] && $existing['size'] == $input['size']) {
+                echo json_encode(['success' => true, 'exists' => true, 'message' => 'Item already in cart', 'count' => count($_SESSION['cart'])]);
+                exit;
+            }
+        }
+        // Wholesale Check (Prevent multiple wholesale orders for same product to keep it simple, or allow distinct?)
+        // User asked "do not allow adding the same product". For wholesale, usually one line per product is cleaner, but let's allow if different?
+        // Let's block if the breakdown is somewhat similar or just generally warn?
+        // For now, let's block completely identical wholesale orders (same total qty + same packaging? breakdown matching is hard).
+        // Let's Block ANY wholesale order for this product if one exists, to force user to edit the existing one? 
+        // Or better, just strict check on params we have.
+        // Given complexity, let's stick to: If wholesale order for this product exists, block it? 
+        // No, that might be too aggressive. Let's block if Total Quantity + Packaging is same? No. 
+        // Re-reading user: "do not allow to adding the same product".
+        // I will interpret this as: Unique constraints on (Product, Type, Variant).
+        // For Wholesale: (Product, Type). If you want more, edit the cart.
+        if ($input['type'] === 'wholesale') {
+            echo json_encode(['success' => true, 'exists' => true, 'message' => 'Wholesale order for this product already in cart', 'count' => count($_SESSION['cart'])]);
+            exit;
+        }
+    }
+}
+
 try {
     // Basic validation
     if (!isset($input['product_id']) || !isset($input['type'])) {
@@ -50,7 +78,11 @@ try {
         $item['color_id'] = $input['color_id'];
         $item['size'] = $input['size'];
         $item['quantity'] = 1;
-        $item['price'] = $product['price_retail'];
+
+        $item['packaging'] = $input['packaging'] ?? 'box';
+        $item['packaging_cost'] = ($item['packaging'] === 'box') ? 9 : 0;
+
+        $item['price'] = $product['price_retail'] + $item['packaging_cost'];
         // Fetch Color Name
         $cStmt = $conn->prepare("SELECT color_name, image_url, hex_code FROM product_colors WHERE id = ?");
         $cStmt->execute([$input['color_id']]);
@@ -62,8 +94,25 @@ try {
     } elseif ($input['type'] === 'wholesale') {
         // Advanced wholesale structure
         $item['total_quantity'] = (int) $input['total_quantity'];
-        $item['colors'] = $input['colors']; // array of color IDs
-        $item['packaging'] = $input['packaging'];
+        // Frontend sends 'breakdown' array of {color_id, size, quantity}
+        $item['breakdown'] = $input['breakdown'] ?? [];
+
+        // Extract unique colors for compatibility
+        $item['colors'] = array_values(array_unique(array_column($item['breakdown'], 'color_id')));
+
+        // Enrich breakdown with Color Names
+        if (!empty($item['colors'])) {
+            $placeholders = str_repeat('?,', count($item['colors']) - 1) . '?';
+            $cStmt = $conn->prepare("SELECT id, color_name FROM product_colors WHERE id IN ($placeholders)");
+            $cStmt->execute($item['colors']);
+            $colorMap = $cStmt->fetchAll(PDO::FETCH_KEY_PAIR); // [id => name]
+
+            foreach ($item['breakdown'] as &$bItem) {
+                $bItem['color_name'] = $colorMap[$bItem['color_id']] ?? 'Unknown';
+            }
+        }
+
+        $item['packaging'] = $input['packaging'] ?? 'box';
 
         // Calculate Price based on Tier
         // We know tiers from DB logic but need to replicate or fetch
@@ -81,7 +130,7 @@ try {
         }
 
         $item['price_per_pair'] = $pricePerPair;
-        $item['packaging_cost'] = ($item['packaging'] === 'box') ? 10 : 0;
+        $item['packaging_cost'] = ($item['packaging'] === 'box') ? 9 : 0;
         $item['total_price'] = $qty * ($item['price_per_pair'] + $item['packaging_cost']);
 
         // Fetch Image of first color

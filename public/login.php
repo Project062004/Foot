@@ -37,7 +37,8 @@ require_once __DIR__ . '/../src/Views/header.php';
                             <span
                                 class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-200 bg-gray-50 text-gray-500 text-sm font-medium">+91</span>
                             <input id="mobile" name="mobile" type="tel" pattern="[6-9][0-9]{9}"
-                                title="Enter valid 10-digit mobile number"
+                                title="Enter valid 10-digit mobile number" maxlength="10"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)"
                                 class="flex-1 appearance-none rounded-r-md border border-gray-200 px-3 py-3 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#d05e42] focus:border-[#d05e42] sm:text-sm transition-shadow shadow-sm"
                                 placeholder="9876543210">
                         </div>
@@ -155,52 +156,75 @@ require_once __DIR__ . '/../src/Views/header.php';
         }
 
         sendBtn.disabled = true;
-        sendBtn.innerText = "Sending...";
+        sendBtn.innerText = "Checking...";
 
-        const phoneNumber = "+91" + mobile;
-        const appVerifier = window.recaptchaVerifier;
+        // 1. Check with Backend if user exists
+        fetch('<?= $basePath ?>/api/check_user.php', {
+            method: 'POST',
+            body: JSON.stringify({ mobile: mobile }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.exists) { // User NOT in DB
+                alert("User not found! Please Create an account first.");
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send OTP";
+                return;
+            }
 
-        signInWithPhoneNumber(auth, phoneNumber, appVerifier)
-            .then((result) => {
-                confirmationResult = result;
-                otpSection.classList.remove('hidden');
-                sendBtn.classList.add('hidden');
-                verifyBtn.classList.remove('hidden');
-                mobileInput.disabled = true;
-                alert("OTP Sent!");
-            }).catch((error) => {
-                console.error(error);
-                const errStr = (error.code || '') + ' ' + (error.message || '');
-                if (errStr.includes('too-many-requests') || errStr.includes('billing') || errStr.includes('quota')) {
-                    alert("⚠️ Dev Mode: Firebase Limit/Billing Error.\nSwitching to Mock Logic.\n\nUse OTP: 123456");
+            // 2. User exists, proceed to Send OTP
+            sendBtn.innerText = "Sending OTP...";
+            const phoneNumber = "+91" + mobile;
+            const appVerifier = window.recaptchaVerifier;
 
-                    // Mock Success State
+            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+                .then((result) => {
+                    confirmationResult = result;
                     otpSection.classList.remove('hidden');
                     sendBtn.classList.add('hidden');
                     verifyBtn.classList.remove('hidden');
                     mobileInput.disabled = true;
+                    alert("OTP Sent!");
+                }).catch((error) => {
+                    console.error(error);
+                    const errStr = (error.code || '') + ' ' + (error.message || '');
+                    if (errStr.includes('too-many-requests') || errStr.includes('billing') || errStr.includes('quota')) {
+                        alert("⚠️ Dev Mode: Firebase Limit/Billing Error.\nSwitching to Mock Logic.\n\nUse OTP: 123456");
 
-                    // Mock Confirmation Result
-                    confirmationResult = {
-                        confirm: async function (otp) {
-                            if (otp === '123456') {
-                                return {
-                                    user: {
-                                        getIdToken: async () => 'mock_id_token_12345'
-                                    }
-                                };
-                            } else {
-                                throw new Error("Invalid Mock OTP");
+                        // Mock Success State
+                        otpSection.classList.remove('hidden');
+                        sendBtn.classList.add('hidden');
+                        verifyBtn.classList.remove('hidden');
+                        mobileInput.disabled = true;
+
+                        // Mock Confirmation Result
+                        confirmationResult = {
+                            confirm: async function (otp) {
+                                if (otp === '123456') {
+                                    return {
+                                        user: {
+                                            getIdToken: async () => 'mock_id_token_12345'
+                                        }
+                                    };
+                                } else {
+                                    throw new Error("Invalid Mock OTP");
+                                }
                             }
-                        }
-                    };
-                } else {
-                    sendBtn.disabled = false;
-                    sendBtn.innerText = "Send OTP";
-                    alert("Error sending OTP: " + (error.code || error.message));
-                    grecaptcha.reset(window.recaptchaVerifier.widgetId);
-                }
-            });
+                        };
+                    } else {
+                        sendBtn.disabled = false;
+                        sendBtn.innerText = "Send OTP";
+                        alert("Error sending OTP: " + (error.code || error.message));
+                        grecaptcha.reset(window.recaptchaVerifier.widgetId);
+                    }
+                });
+        })
+        .catch(err => {
+            alert("Server Error checking user status");
+            sendBtn.disabled = false;
+            sendBtn.innerText = "Send OTP";
+        });
     });
 
     // Helper to get redirect param

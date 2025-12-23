@@ -62,6 +62,26 @@ $similarProducts = $stmt->fetchAll();
 $stmt = $conn->prepare("SELECT p.*, (SELECT image_url FROM product_colors pc WHERE pc.product_id = p.id LIMIT 1) as main_image FROM products p WHERE is_bestseller = 1 AND id != :id LIMIT 10");
 $stmt->execute(['id' => $id]);
 $recommendedProducts = $stmt->fetchAll();
+
+// CART STATE PRELOAD
+$cartItemsForProduct = [];
+if (isset($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $cItem) {
+        if ($cItem['product_id'] == $id) {
+            $cartItemsForProduct[] = $cItem;
+        }
+    }
+}
+
+// EDIT MODE
+$editIndex = isset($_GET['edit']) ? (int) $_GET['edit'] : null;
+$editItem = null;
+if ($editIndex !== null && isset($_SESSION['cart'][$editIndex])) {
+    $temp = $_SESSION['cart'][$editIndex];
+    if ($temp['product_id'] == $id) {
+        $editItem = $temp;
+    }
+}
 ?>
 
 <div class="bg-white min-h-screen pb-20">
@@ -192,7 +212,15 @@ $recommendedProducts = $stmt->fetchAll();
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Select Size (UK)
                                 </h3>
-                                <a href="#" class="text-xs text-terracotta-600 underline">Size Guide</a>
+                                <button onclick="openSizeChart()"
+                                    class="text-xs text-terracotta-600 underline flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                        </path>
+                                    </svg>
+                                    Size Chart
+                                </button>
                             </div>
                             <div class="grid grid-cols-5 gap-3">
                                 <?php foreach ([7, 8, 9, 10, 11] as $size): ?>
@@ -212,9 +240,26 @@ $recommendedProducts = $stmt->fetchAll();
                             </div>
                         </div>
 
+                        <!-- Packaging Option (Retail) -->
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Packaging</h3>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="retail-packaging" value="polybag"
+                                        class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300">
+                                    <span class="text-sm text-gray-700">Polybag (Free)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="retail-packaging" value="box" checked
+                                        class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300">
+                                    <span class="text-sm text-gray-700">Box (+₹9)</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Add to Cart Button -->
                         <div class="pt-6 border-t border-gray-100">
-                            <button onclick="addToCartRoot('retail')"
+                            <button onclick="addToCartRoot('retail')" id="retail-add-btn"
                                 class="w-full bg-gray-900 hover:bg-black text-white py-5 rounded-xl font-bold uppercase tracking-widest text-sm shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">Add
                                 to Bag</button>
                             <div class="mt-4 flex items-center justify-center space-x-2 text-xs text-gray-500">
@@ -238,21 +283,52 @@ $recommendedProducts = $stmt->fetchAll();
 
                         <!-- Pack Size Buttons -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Pack
-                                Size</label>
-                            <div class="flex flex-wrap gap-2 mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-xs font-bold text-gray-900 uppercase tracking-wide">Pack
+                                    Size</label>
+                                <button onclick="openSizeChart()"
+                                    class="text-xs text-terracotta-600 underline flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                        </path>
+                                    </svg>
+                                    Size Chart
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 mb-4">
                                 <button onclick="setPackSize(60, this)"
-                                    class="pack-btn px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-gray-900 focus:outline-none transition-all">60
-                                    pairs</button>
+                                    class="pack-btn p-3 border border-gray-200 rounded-xl text-left hover:border-gray-900 focus:outline-none transition-all flex flex-col justify-between group">
+                                    <span class="block text-sm font-bold mb-1">60 Pairs</span>
+                                    <span class="block text-xs opacity-70 mb-2">Delivery: 4-5 Days</span>
+                                    <span
+                                        class="px-2 py-1 rounded bg-green-100 text-green-800 text-[10px] font-bold w-fit">5-8%
+                                        OFF</span>
+                                </button>
                                 <button onclick="setPackSize(120, this)"
-                                    class="pack-btn px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-gray-900 focus:outline-none transition-all">120
-                                    pairs</button>
+                                    class="pack-btn p-3 border border-gray-200 rounded-xl text-left hover:border-gray-900 focus:outline-none transition-all flex flex-col justify-between group">
+                                    <span class="block text-sm font-bold mb-1">120 Pairs</span>
+                                    <span class="block text-xs opacity-70 mb-2">Delivery: 7-9 Days</span>
+                                    <span
+                                        class="px-2 py-1 rounded bg-green-100 text-green-800 text-[10px] font-bold w-fit">9-12%
+                                        OFF</span>
+                                </button>
                                 <button onclick="setPackSize(180, this)"
-                                    class="pack-btn px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-gray-900 focus:outline-none transition-all">180
-                                    pairs</button>
+                                    class="pack-btn p-3 border border-gray-200 rounded-xl text-left hover:border-gray-900 focus:outline-none transition-all flex flex-col justify-between group">
+                                    <span class="block text-sm font-bold mb-1">180 Pairs</span>
+                                    <span class="block text-xs opacity-70 mb-2">Delivery: 10-12 Days</span>
+                                    <span
+                                        class="px-2 py-1 rounded bg-green-100 text-green-800 text-[10px] font-bold w-fit">13-16%
+                                        OFF</span>
+                                </button>
                                 <button onclick="setPackSize(240, this)"
-                                    class="pack-btn px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-gray-900 focus:outline-none transition-all">240
-                                    pairs</button>
+                                    class="pack-btn p-3 border border-gray-200 rounded-xl text-left hover:border-gray-900 focus:outline-none transition-all flex flex-col justify-between group">
+                                    <span class="block text-sm font-bold mb-1">240 Pairs</span>
+                                    <span class="block text-xs opacity-70 mb-2">Delivery: 12-15 Days</span>
+                                    <span
+                                        class="px-2 py-1 rounded bg-green-100 text-green-800 text-[10px] font-bold w-fit">17-20%
+                                        OFF</span>
+                                </button>
                             </div>
 
                             <!-- Custom & Auto Split -->
@@ -300,6 +376,23 @@ $recommendedProducts = $stmt->fetchAll();
                                 class="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto border border-gray-100">
                                 <p class="text-sm text-gray-400 italic text-center py-4">Select a pack size and colors
                                     to start distributing.</p>
+                            </div>
+                        </div>
+
+                        <!-- Packaging Option (Wholesale) -->
+                        <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg">
+                            <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Packaging</h3>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="ws-packaging" value="polybag"
+                                        class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300">
+                                    <span class="text-sm text-gray-700">Polybag (Free)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="ws-packaging" value="box" checked
+                                        class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300">
+                                    <span class="text-sm text-gray-700">Box (+₹9/pair)</span>
+                                </label>
                             </div>
                         </div>
 
@@ -573,7 +666,109 @@ $recommendedProducts = $stmt->fetchAll();
     const WHOLESALE_TIERS = <?= json_encode($tiers) ?>;
     const PRODUCT_ID = <?= $id ?>;
     const GALLERY_IMAGES = <?= json_encode(array_column($colors, 'image_url')) ?>;
+    let CART_STATE = <?= json_encode($cartItemsForProduct) ?>;
+    let EDIT_ITEM = <?= json_encode($editItem) ?>;
+    let EDIT_INDEX = <?= json_encode($editIndex) ?>;
     let currentSlide = 0;
+
+    // --- BUTTON STATE LOGIC & EDIT INIT ---
+    function checkRetailButtonState() {
+        if (EDIT_ITEM && EDIT_ITEM.type === 'retail') return; // Don't override in edit mode
+
+        const colorInput = document.querySelector('input[name="retail-color"]:checked');
+        const sizeInput = document.querySelector('input[name="retail-size"]:checked');
+        const btn = document.getElementById('retail-add-btn');
+
+        if (!colorInput || !sizeInput) return;
+
+        const colorId = colorInput.value;
+        const size = sizeInput.value;
+
+        const exists = CART_STATE.find(item => item.type === 'retail' && item.color_id == colorId && item.size == size);
+
+        if (exists) {
+            btn.innerText = "GO TO BAG";
+            btn.onclick = function () { window.location.href = '<?= $basePath ?>/cart.php'; };
+            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+            btn.classList.remove('bg-gray-900', 'hover:bg-black');
+        } else {
+            btn.innerText = "ADD TO BAG";
+            btn.onclick = function () { addToCartRoot('retail'); };
+            btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            btn.classList.add('bg-gray-900', 'hover:bg-black');
+        }
+    }
+
+    function initEditMode() {
+        if (!EDIT_ITEM) return;
+
+        if (EDIT_ITEM.type === 'retail') {
+            switchTab('retail');
+            // Select Inputs
+            const cInput = document.querySelector(`input[name="retail-color"][value="${EDIT_ITEM.color_id}"]`);
+            const sInput = document.querySelector(`input[name="retail-size"][value="${EDIT_ITEM.size}"]`);
+            if (cInput) cInput.checked = true;
+            if (sInput) sInput.checked = true;
+
+            // Change Button
+            const btn = document.getElementById('retail-add-btn');
+            btn.innerText = "UPDATE BAG";
+            btn.onclick = function () { updateAppCart('retail'); };
+            btn.classList.remove('bg-gray-900');
+            btn.classList.add('bg-terracotta-600', 'hover:bg-terracotta-700');
+
+        } else if (EDIT_ITEM.type === 'wholesale') {
+            switchTab('wholesale');
+
+            // Populate State
+            wsState.packSize = 0; // Custom by default for edits
+            wsState.manualQty = true;
+
+            if (EDIT_ITEM.breakdown && Array.isArray(EDIT_ITEM.breakdown)) {
+                EDIT_ITEM.breakdown.forEach(b => {
+                    // key: color_size
+                    const key = `${b.color_id}_${b.size}`;
+                    wsState.distribution[key] = b.quantity;
+
+                    // Mark color as selected if not already
+                    if (!wsState.selectedColors.find(c => c.id == b.color_id)) {
+                        // We need name. Find in color inputs?
+                        const lbl = document.getElementById('ws-lbl-' + b.color_id);
+                        const name = lbl ? lbl.innerText.trim() : 'Color';
+                        wsState.selectedColors.push({ id: b.color_id, name: name });
+
+                        // Check the box visually
+                        const box = document.querySelector(`.ws-color-check[value="${b.color_id}"]`);
+                        if (box) box.checked = true;
+
+                        // Force toggle logic visual update without resetting state
+                        const label = document.getElementById('ws-lbl-' + b.color_id);
+                        const checkIcon = label.querySelector('.check-icon');
+                        label.classList.remove('bg-white', 'border-gray-200');
+                        label.classList.add('ring-2', 'ring-gray-900', 'bg-blue-50', 'border-gray-900');
+                        if (checkIcon) checkIcon.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Re-render
+            renderWholesaleMatrix();
+
+            // Change Button
+            const btn = document.getElementById('ws-add-btn');
+            btn.innerText = "UPDATE WHOLESALE ORDER";
+            btn.onclick = function () { updateAppCart('wholesale'); };
+        }
+    }
+
+    // Add Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('input[name="retail-color"], input[name="retail-size"]').forEach(el => {
+            el.addEventListener('change', checkRetailButtonState);
+        });
+        checkRetailButtonState();
+        initEditMode();
+    });
 
     // --- ZOOM LOGIC ---
     function openZoomModal(index) {
@@ -679,33 +874,33 @@ $recommendedProducts = $stmt->fetchAll();
         // Source of truth is the checkbox state
         const label = document.getElementById('ws-lbl-' + id);
         const checkIcon = label.querySelector('.check-icon');
-        
+
         if (input.checked) {
             // Add to state if not exists
             if (!wsState.selectedColors.find(c => c.id == id)) {
                 wsState.selectedColors.push({ id, name });
             }
-            
+
             // Apply Active Styles
             label.classList.remove('bg-white', 'border-gray-200');
             label.classList.add('ring-2', 'ring-gray-900', 'bg-blue-50', 'border-gray-900');
-            if(checkIcon) checkIcon.classList.remove('hidden');
-            
+            if (checkIcon) checkIcon.classList.remove('hidden');
+
         } else {
             // Remove from state
             wsState.selectedColors = wsState.selectedColors.filter(c => c.id != id);
-            
+
             // Remove Active Styles
             label.classList.remove('ring-2', 'ring-gray-900', 'bg-blue-50', 'border-gray-900');
             label.classList.add('bg-white', 'border-gray-200');
-            if(checkIcon) checkIcon.classList.add('hidden');
-            
+            if (checkIcon) checkIcon.classList.add('hidden');
+
             // Clear distribution for this color
             for (const key in wsState.distribution) {
                 if (key.startsWith(`${id}_`)) delete wsState.distribution[key];
             }
         }
-        
+
         renderWholesaleMatrix();
     }
 
@@ -713,34 +908,34 @@ $recommendedProducts = $stmt->fetchAll();
         wsState.packSize = size;
         wsState.manualQty = false; // "Fixed" mode
         wsState.distribution = {}; // Clear previous custom edits
-        
+
         // Update UI buttons
         document.querySelectorAll('.pack-btn').forEach(b => {
-             b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
-             b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
+            b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+            b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
         });
-        if(btnEl) {
+        if (btnEl) {
             btnEl.classList.remove('bg-white', 'text-gray-900', 'border-gray-200');
             btnEl.classList.add('bg-gray-800', 'text-white', 'border-gray-800');
         }
-        
+
         // Clear custom input visually
         document.getElementById('ws-custom-qty').value = '';
-        
+
         renderWholesaleMatrix();
     }
-    
+
     // Triggered when user Types in the Custom Box
     function handleCustomQtyInput(val) {
         wsState.packSize = parseInt(val) || 0;
         wsState.manualQty = true; // "Custom" mode
-        
+
         // Reset Pack Buttons
         document.querySelectorAll('.pack-btn').forEach(b => {
-             b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
-             b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
+            b.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+            b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
         });
-        
+
         renderWholesaleMatrix();
     }
 
@@ -752,30 +947,30 @@ $recommendedProducts = $stmt->fetchAll();
 
     function autoSplit() {
         // Only for Custom Mode or Manual Trigger
-        if(!wsState.packSize || wsState.packSize <= 0) return;
-        
+        if (!wsState.packSize || wsState.packSize <= 0) return;
+
         const inputs = document.querySelectorAll('.ws-size-input');
-        if(inputs.length === 0) return;
-        
+        if (inputs.length === 0) return;
+
         const perInput = Math.floor(wsState.packSize / inputs.length);
         let remainder = wsState.packSize % inputs.length;
-        
+
         inputs.forEach(inp => {
             let val = perInput;
-            if(remainder > 0) { val++; remainder--; }
-            
+            if (remainder > 0) { val++; remainder--; }
+
             inp.value = val;
             const key = `${inp.dataset.color}_${inp.dataset.size}`;
             wsState.distribution[key] = val;
         });
-        
+
         updateWholesaleSummary();
     }
 
     function renderWholesaleMatrix() {
         const container = document.getElementById('ws-matrix-container');
         container.innerHTML = '';
-        
+
         if (wsState.selectedColors.length === 0) {
             container.innerHTML = '<p class="text-sm text-gray-400 italic text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">Select at least one color above to see distribution options.</p>';
             updateWholesaleSummary();
@@ -786,7 +981,7 @@ $recommendedProducts = $stmt->fetchAll();
         let fixedPerSlot = 0;
         let fixedRemainder = 0;
         let isReadOnly = false;
-        
+
         if (!wsState.manualQty && wsState.packSize > 0) {
             isReadOnly = true;
             const totalSlots = wsState.selectedColors.length * 5; // 5 sizes always
@@ -796,7 +991,7 @@ $recommendedProducts = $stmt->fetchAll();
 
         const sizes = [7, 8, 9, 10, 11];
         let html = '<div class="space-y-6">';
-        
+
         wsState.selectedColors.forEach(color => {
             html += `
             <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
@@ -806,11 +1001,11 @@ $recommendedProducts = $stmt->fetchAll();
                     <span class="text-[10px] text-gray-500">5 Sizes Available</span>
                 </div>
                 <div class="p-2 space-y-1">`;
-                
+
             sizes.forEach(size => {
                 const key = `${color.id}_${size}`;
                 let val = 0;
-                
+
                 if (!wsState.manualQty && wsState.packSize > 0) {
                     // Fixed Mode: Calculate Value
                     val = fixedPerSlot;
@@ -821,9 +1016,9 @@ $recommendedProducts = $stmt->fetchAll();
                     // Custom Mode: Use State
                     val = wsState.distribution[key] || 0;
                 }
-                
+
                 const readOnlyAttr = isReadOnly ? 'readonly class="ws-size-input w-20 border border-transparent bg-gray-50 rounded-md px-3 py-1.5 text-sm text-center font-bold text-gray-500 outline-none cursor-not-allowed"' : 'class="ws-size-input w-20 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-center font-medium focus:ring-1 focus:ring-gray-900 outline-none transition-shadow"';
-                
+
                 html += `
                 <div class="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded group transition-colors">
                     <div class="flex items-center space-x-3">
@@ -841,12 +1036,12 @@ $recommendedProducts = $stmt->fetchAll();
                     </div>
                 </div>`;
             });
-            
+
             html += `</div></div>`;
         });
         html += '</div>';
         container.innerHTML = html;
-        
+
         updateWholesaleSummary();
     }
 
@@ -900,6 +1095,9 @@ $recommendedProducts = $stmt->fetchAll();
             payload.size = size;
             payload.quantity = 1;
 
+            // Capture Retail Packaging
+            payload.packaging = document.querySelector('input[name="retail-packaging"]:checked')?.value || 'box';
+
         } else if (type === 'wholesale') {
             // Collect distribution from STATE or DOM?
             // DOM is safer for "what you see is what you get"
@@ -923,7 +1121,7 @@ $recommendedProducts = $stmt->fetchAll();
 
             payload.total_quantity = totalQty;
             payload.breakdown = items;
-            payload.packaging = 'box'; // Default or add selector
+            payload.packaging = document.querySelector('input[name="ws-packaging"]:checked')?.value || 'box';
 
         } else if (type === 'sample') {
             payload.color_id = document.getElementById('sample-color').value;
@@ -939,9 +1137,36 @@ $recommendedProducts = $stmt->fetchAll();
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Added to bag successfully');
-                    if (typeof updateCartBadge === 'function') {
-                        updateCartBadge(data.count);
+                    if (data.exists && !EDIT_ITEM) { // Only redirect if NOT editing (adding duplicate new)
+                        showToast('Item already in Bag. Redirecting...');
+                        setTimeout(() => window.location.href = '<?= $basePath ?>/cart.php', 1000);
+                    } else {
+                        showToast(EDIT_ITEM ? 'Bag updated successfully' : 'Added to bag successfully');
+                        if (typeof updateCartBadge === 'function') {
+                            updateCartBadge(data.count);
+                        }
+
+                        // Update local state and button immediately
+                        if (type === 'retail') {
+                            if (!EDIT_ITEM) CART_STATE.push(payload);
+                            // Do NOT checkRetailButtonState() here as we want to show the Success State now
+                        }
+
+                        if (EDIT_ITEM) {
+                            setTimeout(() => window.location.href = '<?= $basePath ?>/cart.php', 500);
+                        } else {
+                            // TRANSFORM BUTTON TO "GO TO BAG"
+                            let btnId = (type === 'retail') ? 'retail-add-btn' : 'ws-add-btn';
+                            const btn = document.getElementById(btnId);
+                            if (btn) {
+                                btn.innerText = "GO TO BAG";
+                                btn.classList.remove('bg-gray-900', 'hover:bg-black', 'text-white');
+                                btn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'shadow-green-200');
+                                btn.onclick = function () {
+                                    window.location.href = '<?= $basePath ?>/cart.php';
+                                };
+                            }
+                        }
                     }
                 } else {
                     showToast(data.error, 'error');
@@ -951,6 +1176,153 @@ $recommendedProducts = $stmt->fetchAll();
                 showToast('Something went wrong', 'error');
             });
     }
+
+    function updateAppCart(type) {
+        // Re-use logic to gather payload
+        let payload = { product_id: PRODUCT_ID, type: type, index: EDIT_INDEX };
+
+        if (type === 'retail') {
+            const color = document.querySelector('input[name="retail-color"]:checked')?.value;
+            const size = document.querySelector('input[name="retail-size"]:checked')?.value;
+            if (!color || !size) { alert('Please select color and size'); return; }
+            payload.color_id = color;
+            payload.size = size;
+            payload.quantity = EDIT_ITEM.quantity || 1;
+            payload.packaging = document.querySelector('input[name="retail-packaging"]:checked')?.value || 'box';
+
+        } else if (type === 'wholesale') {
+            const inputs = document.querySelectorAll('.ws-size-input');
+            let items = [];
+            let totalQty = 0;
+
+            inputs.forEach(inp => {
+                const q = parseInt(inp.value) || 0;
+                if (q > 0) {
+                    items.push({
+                        color_id: inp.dataset.color,
+                        size: inp.dataset.size,
+                        quantity: q
+                    });
+                    totalQty += q;
+                }
+            });
+
+            if (totalQty === 0) { alert('Total quantity cannot be zero'); return; }
+
+            payload.total_quantity = totalQty;
+            payload.breakdown = items;
+            payload.packaging = document.querySelector('input[name="ws-packaging"]:checked')?.value || 'box';
+        }
+
+        fetch('<?= $basePath ?>/api/cart_replace.php', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Bag updated successfully');
+                    setTimeout(() => window.location.href = '<?= $basePath ?>/cart.php', 500);
+                } else {
+                    showToast(data.error, 'error');
+                }
+            });
+    }
+
+    // Size Chart Logic
+    function openSizeChart() {
+        const modal = document.getElementById('sizeChartModal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closeSizeChart() {
+        const modal = document.getElementById('sizeChartModal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
 </script>
+
+<!-- Size Chart Modal -->
+<div id="sizeChartModal"
+    class="fixed inset-0 z-[110] bg-black/50 hidden transition-opacity duration-300 opacity-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform transition-all relative">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 class="text-xl font-bold font-serif text-gray-900">Size Chart</h3>
+            <button onclick="closeSizeChart()" class="text-gray-400 hover:text-gray-900">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-center">
+                    <thead class="bg-gray-100 text-gray-900 font-bold uppercase text-xs">
+                        <tr>
+                            <th class="py-3 px-2 rounded-l-lg">UK/India</th>
+                            <th class="py-3 px-2">Euro</th>
+                            <th class="py-3 px-2">US</th>
+                            <th class="py-3 px-2 rounded-r-lg">Length (cm)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700 divide-y divide-gray-100">
+                        <tr>
+                            <td class="py-3">4</td>
+                            <td class="py-3">37</td>
+                            <td class="py-3">5</td>
+                            <td class="py-3">23.5</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">5</td>
+                            <td class="py-3">38</td>
+                            <td class="py-3">6</td>
+                            <td class="py-3">24.5</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">6</td>
+                            <td class="py-3">39</td>
+                            <td class="py-3">7</td>
+                            <td class="py-3">25.5</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">7</td>
+                            <td class="py-3">40</td>
+                            <td class="py-3">8</td>
+                            <td class="py-3">26</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">8</td>
+                            <td class="py-3">41</td>
+                            <td class="py-3">9</td>
+                            <td class="py-3">27</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">9</td>
+                            <td class="py-3">42</td>
+                            <td class="py-3">10</td>
+                            <td class="py-3">27.5</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">10</td>
+                            <td class="py-3">43</td>
+                            <td class="py-3">11</td>
+                            <td class="py-3">28</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3">11</td>
+                            <td class="py-3">44</td>
+                            <td class="py-3">12</td>
+                            <td class="py-3">29</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">Reference guide only. Fit may vary by style.</p>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../src/Views/footer.php'; ?>

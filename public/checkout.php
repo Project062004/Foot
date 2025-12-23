@@ -13,8 +13,17 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Calculate Totals (Same logic as Cart)
 $cart = $_SESSION['cart'] ?? [];
+$mode = $_GET['mode'] ?? 'full';
+
+// Filter Cart if Retail Only Mode
+if ($mode === 'retail_only') {
+    $cart = array_filter($cart, function ($item) {
+        return $item['type'] === 'retail' || $item['type'] === 'sample';
+    });
+}
+
+// Calculate Totals (Same logic as Cart)
 $retailTotal = 0;
 $wholesaleTotalPairs = 0;
 $wholesaleTotalAmount = 0;

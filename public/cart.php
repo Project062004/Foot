@@ -23,8 +23,12 @@ $grandTotal = $retailTotal + $wholesaleTotalAmount;
 $canCheckout = true;
 $checkoutMessage = "";
 
-// 240 Rule Removed
-// if ($hasWholesale && $wholesaleTotalPairs < 240) { ... }
+// 240 Rule
+if ($hasWholesale && $wholesaleTotalPairs < 240) {
+    $canCheckout = false;
+    $remaining = 240 - $wholesaleTotalPairs;
+    $checkoutMessage = "Wholesale Minimum: 240 Pairs. (Current: $wholesaleTotalPairs, Need: $remaining more)";
+}
 
 ?>
 
@@ -57,21 +61,23 @@ $checkoutMessage = "";
                         <?php foreach ($cart as $key => $item): ?>
                             <li
                                 class="flex flex-col sm:flex-row bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
+                                <!-- Cart Item Card -->
                                 <div class="flex-shrink-0 relative group">
                                     <img src="<?= $item['image'] ?? 'https://via.placeholder.com/150' ?>"
-                                        class="w-full h-48 sm:w-32 sm:h-32 rounded-xl object-center object-cover bg-gray-100">
+                                        class="w-full h-48 sm:w-36 sm:h-36 rounded-xl object-center object-cover bg-gray-100">
                                 </div>
 
-                                <div class="mt-4 sm:mt-0 sm:ml-6 flex-1 flex flex-col justify-between">
-                                    <div>
+                                <div class="mt-4 sm:mt-0 sm:ml-8 flex-1 flex flex-col justify-between">
+                                    <div class="space-y-3">
+                                        <!-- Header: Name & Price -->
                                         <div class="flex justify-between items-start">
-                                            <h3 class="text-lg font-bold text-gray-900 font-serif">
+                                            <h3 class="text-xl font-bold text-gray-900 font-serif tracking-tight">
                                                 <a href="<?= $basePath ?>/product.php?id=<?= $item['product_id'] ?>"
                                                     class="hover:text-terracotta-600 transition-colors">
                                                     <?= htmlspecialchars($item['name']) ?>
                                                 </a>
                                             </h3>
-                                            <p class="text-lg font-bold text-gray-900 font-serif">
+                                            <p class="text-xl font-bold text-gray-900 font-serif">
                                                 <?php if ($item['type'] == 'wholesale'): ?>
                                                     ₹<?= number_format($item['total_price']) ?>
                                                 <?php else: ?>
@@ -80,65 +86,122 @@ $checkoutMessage = "";
                                             </p>
                                         </div>
 
-                                        <div
-                                            class="mt-1 flex items-center text-xs tracking-wide uppercase text-gray-500 font-bold">
-                                            <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600"><?= $item['type'] ?>
-                                                Order</span>
+                                        <!-- Badge -->
+                                        <div>
+                                            <span
+                                                class="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                                                <?= $item['type'] ?> ORDER
+                                            </span>
                                         </div>
 
+                                        <!-- Details Block -->
                                         <?php if ($item['type'] == 'wholesale'): ?>
-                                            <div class="mt-3 text-sm text-gray-600 space-y-1">
-                                                <p>Total Pairs: <span
+                                            <div class="text-sm text-gray-600 space-y-1">
+                                                <p><span class="font-medium text-gray-500">Total Pairs:</span> <span
                                                         class="font-bold text-gray-900"><?= $item['total_quantity'] ?></span></p>
-                                                <p>Price per Pair: ₹<?= $item['price_per_pair'] ?></p>
-                                                <p>Packaging: <span class="capitalize font-medium"><?= $item['packaging'] ?></span>
+                                                <p><span class="font-medium text-gray-500">Price per Pair:</span> <span
+                                                        class="text-gray-900">₹<?= $item['price_per_pair'] ?></span></p>
+                                                <p>
+                                                    <span class="font-medium text-gray-500">Packaging:</span>
+                                                    <span class="text-gray-900 capitalize"><?= $item['packaging'] ?></span>
                                                     <span class="text-gray-400 text-xs">(+₹<?= $item['packaging_cost'] ?>)</span>
                                                 </p>
-                                                <div
-                                                    class="text-xs text-terracotta-600 bg-terracotta-50 inline-block px-2 py-1 rounded mt-1">
-                                                    <?= count($item['colors']) ?> Colors Selected (Auto-Split)
-                                                </div>
+
+                                                <?php
+                                                $breakdown = $item['breakdown'] ?? [];
+                                                $uniqueColors = [];
+                                                $uniqueSizes = [];
+                                                foreach ($breakdown as $b) {
+                                                    $cName = $b['color_name'] ?? 'Unknown';
+                                                    $sSize = $b['size'] ?? '?';
+                                                    if (!in_array($cName, $uniqueColors))
+                                                        $uniqueColors[] = $cName;
+                                                    if (!in_array($sSize, $uniqueSizes))
+                                                        $uniqueSizes[] = $sSize;
+                                                }
+                                                sort($uniqueSizes);
+                                                ?>
+                                                <p class="pt-1"><span class="font-bold text-gray-900">Colors:</span>
+                                                    <?= implode(', ', array_map('htmlspecialchars', $uniqueColors)) ?></p>
+                                                <p><span class="font-bold text-gray-900">Sizes:</span>
+                                                    <?= implode(', ', $uniqueSizes) ?></p>
                                             </div>
+
+                                            <!-- Configuration Section -->
+                                            <div class="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
+                                                <span
+                                                    class="text-xs font-bold text-gray-400 uppercase tracking-widest">Configuration</span>
+                                                <a href="<?= $basePath ?>/product.php?id=<?= $item['product_id'] ?>&edit=<?= $key ?>"
+                                                    class="text-sm font-bold text-terracotta-600 underline hover:text-terracotta-700 transition-colors">Edit
+                                                    Quantity & details</a>
+                                            </div>
+
                                         <?php else: ?>
-                                            <div class="mt-3 text-sm text-gray-500 flex space-x-4">
+                                            <!-- Retail Details -->
+                                            <div class="text-sm text-gray-600 space-y-1">
                                                 <?php if (!empty($item['color_name'])): ?>
-                                                    <p class="flex items-center"><span
+                                                    <p class="flex items-center">
+                                                        <span
                                                             class="w-3 h-3 rounded-full bg-gray-200 mr-2 border border-gray-300"></span>
-                                                        <?= $item['color_name'] ?></p>
+                                                        <?= $item['color_name'] ?>
+                                                    </p>
                                                 <?php endif; ?>
                                                 <?php if (!empty($item['size'])): ?>
-                                                    <p class="border-l border-gray-300 pl-4">Size: <span
-                                                            class="font-medium text-gray-900"><?= $item['size'] ?></span></p>
+                                                    <p>Size: <span class="font-bold text-gray-900"><?= $item['size'] ?></span></p>
                                                 <?php endif; ?>
+                                                <?php if (isset($item['packaging'])): ?>
+                                                    <p>
+                                                        Packaging: <span class="font-bold text-gray-900 capitalize"><?= $item['packaging'] ?></span>
+                                                        <?php if ($item['packaging'] === 'box'): ?>
+                                                            <span class="text-xs text-gray-400 font-medium">(+₹<?= $item['packaging_cost'] ?>)</span>
+                                                        <?php else: ?>
+                                                            <span class="text-xs text-green-600 font-bold uppercase tracking-wider ml-1">FREE</span>
+                                                        <?php endif; ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Retail Edit Link -->
+                                            <div class="pt-2 mt-2">
+                                                <a href="<?= $basePath ?>/product.php?id=<?= $item['product_id'] ?>&edit=<?= $key ?>"
+                                                    class="text-xs font-bold text-gray-900 underline hover:text-terracotta-600">Edit
+                                                    Details</a>
                                             </div>
                                         <?php endif; ?>
                                     </div>
 
-                                    <div class="mt-4 flex justify-between items-center sm:mt-0">
-                                        <?php if ($item['type'] !== 'wholesale'): ?>
-                                            <div class="flex items-center space-x-3">
-                                                <label class="text-sm text-gray-500">Qty</label>
-                                                <select
-                                                    class="rounded-lg border-gray-200 py-1.5 text-base font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-terracotta-500 focus:border-terracotta-500 sm:text-sm bg-gray-50">
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                    <option value="5">5</option>
-                                                </select>
+                                    <!-- Bottom Row: Totals & Remove -->
+                                    <div class="mt-4 flex justify-between items-end border-t border-transparent pt-2">
+                                        <?php if ($item['type'] == 'wholesale'): ?>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-sm font-bold text-gray-900">Total Pairs:</span>
+                                                <span class="text-xl font-bold text-gray-900"><?= $item['total_quantity'] ?></span>
                                             </div>
                                         <?php else: ?>
-                                            <div></div> <!-- Spacer -->
+                                            <!-- Retail Qty Selector -->
+                                            <div class="flex items-center space-x-3">
+                                                <label class="text-sm text-gray-500 font-medium">Qty</label>
+                                                <div
+                                                    class="flex items-center space-x-1 border border-gray-200 rounded-lg p-0.5 bg-gray-50">
+                                                    <button onclick="updateCartItem(<?= $key ?>, 'dec')"
+                                                        class="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm rounded transition-all font-bold">-</button>
+                                                    <input type="text" readonly value="<?= $item['quantity'] ?>"
+                                                        class="w-8 text-center text-sm font-bold text-gray-900 bg-transparent focus:outline-none">
+                                                    <button onclick="updateCartItem(<?= $key ?>, 'inc')"
+                                                        class="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm rounded transition-all font-bold">+</button>
+                                                </div>
+                                            </div>
                                         <?php endif; ?>
 
                                         <button onclick="removeItem(<?= $key ?>)"
-                                            class="text-sm font-medium text-red-500 hover:text-red-700 transition-colors flex items-center group">
-                                            <svg class="h-4 w-4 mr-1 group-hover:scale-110 transition-transform" fill="none"
+                                            class="text-sm font-medium text-red-500 hover:text-red-700 transition-colors flex items-center group px-2 py-1 rounded hover:bg-red-50">
+                                            <svg class="h-4 w-4 mr-1.5 group-hover:scale-110 transition-transform" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                             Remove
+
                                         </button>
                                     </div>
                                 </div>
@@ -195,11 +258,26 @@ $checkoutMessage = "";
                         <?php endif; ?>
 
                         <?php if (isset($_SESSION['user_id'])): ?>
+                            
+                            <!-- Main Checkout Button (Disabled if Wholesale rule failed) -->
                             <button type="button" <?= !$canCheckout ? 'disabled' : '' ?>
                                 onclick="window.location.href='<?= $basePath ?>/checkout.php'"
                                 class="w-full bg-gray-900 border border-transparent rounded-full shadow-lg hover:shadow-xl py-4 px-4 text-base font-bold text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5">
                                 Checkout Securely
                             </button>
+
+                            <!-- Special Fallback: Checkout Retail Only -->
+                            <?php if (!$canCheckout && $retailTotal > 0): ?>
+                                <div class="mt-3 text-center">
+                                    <span class="text-xs text-gray-500 font-medium block mb-2">OR</span>
+                                    <button type="button"
+                                        onclick="window.location.href='<?= $basePath ?>/checkout.php?mode=retail_only'"
+                                        class="w-full bg-white border border-gray-300 rounded-full py-3 px-4 text-sm font-bold text-gray-900 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm">
+                                        Checkout Retail Items Only (₹<?= number_format($retailTotal) ?>)
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+
                         <?php else: ?>
                             <button type="button"
                                 onclick="alert('Please Login to Checkout'); window.location.href='<?= $basePath ?>/login.php?redirect=checkout'"
@@ -229,6 +307,26 @@ $checkoutMessage = "";
             body: JSON.stringify({ index: index }),
             headers: { 'Content-Type': 'application/json' }
         }).then(() => window.location.reload());
+    }
+
+    function updateCartItem(index, action, subIndex = null) {
+        let payload = { index: index, action: action };
+        if (subIndex !== null) payload.sub_index = subIndex;
+
+        fetch('<?= $basePath ?>/api/cart_update.php', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error updating cart: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => console.error(err));
     }
 </script>
 
